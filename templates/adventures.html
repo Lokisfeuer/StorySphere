@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+    <body>
+		Please just do me a favor: Always use different names for everything, okay? Thanks. I love you!
+		<br>
+		Empty activation flag means its always active.
+		<br>
+		Please push the button of whatever you want to add to your adventure.
+		Then fill out all fields you need to - before starting the next one.
+		If you can't best don't push the button in the first place.
+		<br>
+		Now press this button (or hell will break loose just when you are done writing your adventure):
+		<input type="submit" id="newadventure" value="Start writing adventure" onClick="newadv(); return false;">
+
+		<form method="POST" action="/finished_adventure">
+			When you are done just press this button:
+			<input type=submit value="Submit adventure">
+
+
+			<h2>NPCs</h2>
+			"start items" and "skills" are split with ", "
+			<br>
+			<input type="submit" id="npcbutton" value="New NPC" onClick="newnpc(); return false;">
+
+			<table id="npc_tbl_id" align="center">
+				<thead>
+					<tr>
+						<th>name</th>
+						<th>activation flag</th>
+						<th>description</th>
+						<th>secrets</th>
+						<th>chance to appear</th>
+						<th>start items</th>
+						<th>skills</th>
+					</tr>
+				</thead>
+			</table>
+
+			<h2>Locations</h2>
+			<input type="submit" id="locbutton" value="New location" onClick="newloc(); return false;">
+
+			<table id="loc_tbl_id" align="center">
+				<thead>
+					<tr>
+						<th>name</th>
+						<th>activation flag</th>
+						<th>description</th>
+						<th>secrets</th>
+						<th>start items</th>
+					</tr>
+				</thead>
+			</table>
+
+			<h2>Secrets</h2>
+			<input type="submit" id="secbutton" value="New secret" onClick="newsec(); return false;">
+
+			<table id="sec_tbl_id" align="center">
+				<thead>
+					<tr>
+						<th>name</th>
+						<th>activation flag</th>
+						<th>prompt</th>
+					</tr>
+				</thead>
+			</table>
+
+			<h2>Flags</h2>
+			At the end create one flag with the name "won" and conditions of your choice. when this flag
+			becomes true the adventure is successfully finished.
+			<br>
+			<input type="submit" id="flabutton" value="New flag" onClick="newfla(); return false;">
+
+			<table id="fla_tbl_id" align="center">
+				<thead>
+					<tr>
+						<th>name</th>
+						<th>conditions</th>
+						<th>complex conditions</th>
+					</tr>
+				</thead>
+			</table>
+
+			<h2>Trigger</h2>
+			<input type="submit" id="tributton" value="New Trigger" onClick="newtri(); return false;">
+
+			<table id="tri_tbl_id" align="center">
+				<thead>
+					<tr>
+						<th>name</th>
+						<th>activation flag</th>
+						<th>call flag</th>
+						<th>function</th>
+					</tr>
+				</thead>
+			</table>
+
+			<h2>Starting Stage</h2>
+			<input type="submit" id="stastabutton" value="set starting stage (only use once)" onClick="stasta(); return false;">
+
+			<table id="sta_tbl_id" align="center">
+				<thead>
+					<tr>
+						<th>location</th>
+						<th>npcs</th>
+					</tr>
+				</thead>
+			</table>
+
+			<h2>Variables I am to lazy to store properly. If you change anything here the devil will eat you!</h2>
+			<input type='text' id='myvariables' name='myvariables'>
+		</form>
+
+		<script type="text/javascript" src="frontend.js"></script>
+    </body>
+
+</html>

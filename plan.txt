@@ -1,0 +1,20 @@
+TODO: Update this file and write concrete todos.
+
+1. sammel viele (handcrafted) Objekte für JSON
+2. trainiere Autoencoder
+3. Implementiere Evaluations (handcrafted) Funktion
+4. Trainiere Policy, um von einem Adventure embedding zu verändern
+	- Bestrafe veränderungen bereits bestehender Teile der Story stark!
+5. Erstelle automatisiert viele Beispiel Adventures
+6. Lasse Menschen diese Stories bewerten.
+7. Trainiere eine Evaluationsfunktion, um die Menschen bewertung von dem Adventure Embedding zu trainieren.
+8. Trainiere eine Policy mithilfe der neu gelernten Evaluations funktion.
+9. GGF. springe zurück zu Punkt 5 solange man noch Freunde hat
+
+
+Zu Schritt 2:
+Wie funktioniert detaillierte Kodierung?
+    - use RNN
+Jedes einzelne Objekt wird kodiert.
+    - Da alle möglichen Objektklassen nur endlich viele Features haben, kann jedes einzelne Objekt einfach hardcoded kodiert werden.
+    - 

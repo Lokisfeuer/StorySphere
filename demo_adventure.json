@@ -1,0 +1,146 @@
+{
+    "sci": [
+        {
+            "name": "Max",
+            "charakterbogen": false,
+            "plaene_fuer_den_charakter": true,
+            "startszene": [
+                "id_Eve_1"
+            ],
+            "gruppen": [
+                "id_Gru_1"
+            ],
+            "hat_eine_backstory": true,
+            "backstory": "This is Max awesome backstory. Max was born in Musterhausen. He was once attacked by a monster.",
+            "backstory_sonstiges": [
+                "id_Bea_1"
+            ],
+            "ID": "id_sci_0"
+        }
+    ],
+    "mot": [
+        {
+            "wer": [
+                "id_Spi_1"
+            ],
+            "zu_was_beschreibung": "Max will sich am Monster r\u00e4chen indem er es mit seinen Stiefeln tritt.",
+            "zu_was_fuer_objekten": [
+                "id_Geg_1"
+            ],
+            "wie": true,
+            "positive_faktoren": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "negative_faktoren": [
+                true,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false
+            ],
+            "ID": "id_mot_0"
+        }
+    ],
+    "eus": [
+        {
+            "wer": [
+                "id_Spi_1",
+                "id_Bea_1"
+            ],
+            "wo": [
+                "id_Ort_1_leidergibtesnochkeineorte"
+            ],
+            "was": "Max meets the monster that once attacked him again.",
+            "untersuchen": false,
+            "Gegenst\u00e4nde": [
+                "id_Geg_1"
+            ],
+            "Geheimnisse": [
+                "id_Geh_1"
+            ],
+            "soziale_interaktion": false,
+            "fight": true,
+            "schwierigkeitsgrad": 0.8,
+            "warum": "Max und Monster sind am gleichen Ort.?!",
+            "start": true,
+            "wahrscheinlichkeit": 1.0,
+            "motivationen": [
+                "id_Mot_1"
+            ],
+            "ID": "id_eus_0"
+        }
+    ],
+    "npc": [
+        {
+            "name": "John",
+            "charakterbogen": false,
+            "plaene": false,
+            "events_und_szenen": [
+                "id_Eve_1"
+            ],
+            "gruppen": [
+                "id_Gru_1"
+            ],
+            "hat_eine_backstory": true,
+            "backstory": "John is the one who originally sold Max his boots.",
+            "backstory_sonstiges": [
+                "id_Spi_1",
+                "id_Geg_1"
+            ],
+            "ID": "id_npc_0"
+        }
+    ],
+    "geh": [
+        {
+            "was": "Max once was attacked by the monster in his childhood.",
+            "wer_weiss_davon": [
+                "id_Spi_1",
+                "id_NPC_1"
+            ],
+            "wen_und_was_betrifft_das": [
+                "id_Spi_1",
+                "id_Bea_1"
+            ],
+            "positivitaet": 0.2,
+            "ID": "id_geh_0"
+        }
+    ],
+    "gru": [
+        {
+            "grund_des_zusammenhalts": "John and Max are very good friends.",
+            "ID": "id_gru_0"
+        }
+    ],
+    "bea": [
+        {
+            "difficulty": 0.8,
+            "wo": "id_Ort_1_leidergibtesnochkeineorte",
+            "aussehen": "This beast is a big Monster that seem really quite threatening.",
+            "ID": "id_bea_0"
+        }
+    ],
+    "geg": [
+        {
+            "wessen": [
+                "id_Spi_1"
+            ],
+            "wert": 2.0,
+            "was": "anti-monster-Boots",
+            "ID": "id_geg_0"
+        }
+    ]
+}

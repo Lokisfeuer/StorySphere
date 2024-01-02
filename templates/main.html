@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Story Sphere</title>
+    </head>
+
+    <body>
+        <h2>Current object you are editing.</h2>
+        here are supposed to be all features of the object you are currently editing.
+        <!--<form method="POST" action="/save">{{ current_object }}<input type=submit value="save"></form>-->
+        {{ current_object }}
+
+        <h2>Create new Object</h2>
+        here are supposed to be the create new and blank new buttons.
+        <form method="POST" action="/filled_spi">
+            <input type=submit value="new pre-filled player character">
+        </form>
+        <form method="POST" action="/blank_spi">
+            <input type=submit value="new blank player character">
+        </form>
+        <form method="POST" action="/filled_mot">
+            <input type=submit value="new pre-filled motivation">
+        </form>
+        <form method="POST" action="/blank_mot">
+            <input type=submit value="new blank motivation">
+        </form>
+        <form method="POST" action="/filled_eve">
+            <input type=submit value="new pre-filled event or scene">
+        </form>
+        <form method="POST" action="/blank_eve">
+            <input type=submit value="new blank event or scene">
+        </form>
+        <form method="POST" action="/filled_npc">
+            <input type=submit value="new pre-filled NPC">
+        </form>
+        <form method="POST" action="/blank_npc">
+            <input type=submit value="new blank NPC">
+        </form>
+        <form method="POST" action="/filled_geh">
+            <input type=submit value="new pre-filled secret">
+        </form>
+        <form method="POST" action="/blank_geh">
+            <input type=submit value="new blank secret">
+        </form>
+        <form method="POST" action="/filled_gru">
+            <input type=submit value="new pre-filled group">
+        </form>
+        <form method="POST" action="/blank_gru">
+            <input type=submit value="new blank group">
+        </form>
+        <form method="POST" action="/filled_bea">
+            <input type=submit value="new pre-filled beast">
+        </form>
+        <form method="POST" action="/blank_bea">
+            <input type=submit value="new blank beast">
+        </form>
+        <form method="POST" action="/filled_geg">
+            <input type=submit value="new pre-filled item">
+        </form>
+        <form method="POST" action="/blank_geg">
+            <input type=submit value="new blank item">
+        </form>
+        <h2>The objects you already have</h2>
+        here are supposed to be all already created objects as a list. To edit any of them, enter its id in the text field below and click "edit".
+        <br>
+        {{ listed_adventure }}
+        <br>
+        <form method="POST" action="/edit">
+            <input type=text name=object_id placeholder="id_to_edit">
+            <input type=submit value="edit">
+        </form>
+        <h2>Your adventure</h2>
+        here is your full adventure as a fully written text.
+        {{ written_adventure }}
+    </body>
+</html>

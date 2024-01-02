@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Story Sphere</title>
+    </head>
+
+    <body>
+        <div class="App">
+            <header class="App-header">
+                To return to the main menu please enter "/exit".
+                <p>
+                    <span class="heart">♥️</span><br> {{ text_output }} <br><span class="heart">♥️</span>
+                </p>
+                <form method="POST" action="/playy">
+                    <p>
+                        <span class="heart">♥️</span><br> {{ text_output }} <br><span class="heart">♥️</span>
+                    </p>
+                    <input type="text" name="user_input_play" placeholder="What do you want to do or say?">
+                    <input type=submit>
+                </form>
+                Lets talk outside a form.
+                <form method="POST" action="/stop">
+                    <input type="text" name="user_input_stop" placeholder="Why do you want to stop playing?">
+                    <input type=submit>
+                </form>
+            </header>
+        </div>
+    </body>
+</html>
