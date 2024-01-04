@@ -1,5 +1,41 @@
 TODO: Update this file and write concrete todos.
 
+
+Ziel: Website die hilft Adventure zu schreiben und verschiedene Darstellungsvarianten der Adventure erzeugen kann.
+    Darstellungstypen:
+        - JSON
+        - Fließtext
+        - Vektor (Computerlesbar)
+        - Computerspiel
+        - Brettspiel
+        - ...
+Der AI-clou: Die Website gibt intelligente Vorschläge beim Schreiben des Abenteuers.
+Architektur der AI: siehe ai_architecture
+GUI: Frontend-Ma
+
+TODO AI:
+    - Anna's accuracy testen und auf >90% heben
+    - pre-encode Anna
+    - write function for real-encodings (using Anna)
+    - train Bernd (Bernd summarizes all objects of an ObjectClass to one)
+    - train charlene
+    - Then following next:
+        - get website running!
+        - train reinforcement learning (Daniel)
+            - talk to Mr
+        - think about kickstarter
+TODO GUI:
+    - Plan with Ma (frontend) & Mn (Design)
+    - get Frontend from Ma
+    - write universal Backend
+TODO Other:
+    - build translations from different formats of adventures to the universal and back
+        - generate board-games from JSON!
+
+
+
+
+
 1. sammel viele (handcrafted) Objekte für JSON
 2. trainiere Autoencoder
 3. Implementiere Evaluations (handcrafted) Funktion
