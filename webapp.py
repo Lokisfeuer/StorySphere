@@ -1,11 +1,13 @@
 from flask import Flask, request, render_template, session, redirect, url_for
 from markupsafe import Markup
 import main as main
+import os
 
 app = Flask(__name__)
 
 # TODO Make this an environment variable
-app.secret_key = b'4469db9daad250e41bba1f5d86d378161ef99809bb164f88766340e35c3f582a'
+# TODO Make this a constant! (Don't upload it on github)
+app.secret_key = os.urandom(24)
 
 
 def return_template(session, prefill=None, to_save=None):
