@@ -32,6 +32,9 @@ pre-encodings with ids.
 - Generate adventure-class object
 
 ## Reinforcement Learning
+Storyprompting. Take some prompts (not only text) from the user
+and feed them in as well. (Not part of action-space). 
+At some point maybe add user-groups and train AI's on these.
 - Environment: Adventure-encoding Vektor space
 - State: encoded Adventure
 - Actions: move adventure a little (?) within vector space.
