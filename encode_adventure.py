@@ -177,7 +177,7 @@ class Adventure:
         to_save = {}
         for i in [self.sci, self.mot, self.eus, self.npc, self.geh, self.gru, self.bea, self.geg]:
             to_save.update(i.to_save())
-        with open(path, 'w') as f:
+        with open(path, 'w+') as f:
             f.write(json.dumps(to_save, indent=4))
 
     def load(self, path='adventure.json'):
@@ -186,6 +186,15 @@ class Adventure:
         for i in [self.sci, self.mot, self.eus, self.npc, self.geh, self.gru, self.bea, self.geg]:
             i.all_objects = data[i.name]
             i.id_counter = len(data[i.name])
+
+    def to_list(self):
+        to_save = {}
+        for i in [self.sci, self.mot, self.eus, self.npc, self.geh, self.gru, self.bea, self.geg]:
+            to_save.update(i.to_save())
+        return json.dumps(to_save, indent=4)
+
+    def to_text(self):
+        return 'Adventure to text doesn\'t really work yet.'
 
 
 # This class is more or less an add-on to the adventure class.
