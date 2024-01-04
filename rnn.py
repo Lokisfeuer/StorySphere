@@ -64,9 +64,13 @@ class DecoderRNN(nn.Module):
         self.element_size = output_size
 
     def forward(self, encoder_outputs, encoder_hidden, target_tensor=None):
-        batch_size = encoder_outputs.size(0)
-        decoder_input = torch.empty(batch_size, 1, self.element_size, dtype=torch.float, device=device)  # TODO: find a good start token
-        decoder_input = torch.zeros(batch_size, 1, self.element_size, dtype=torch.float, device=device)
+        if target_tensor is not None:
+            batch_size = encoder_outputs.size(0)
+            decoder_input = torch.empty(batch_size, 1, self.element_size, dtype=torch.float, device=device)  # TODO: find a good start token
+            decoder_input = torch.zeros(batch_size, 1, self.element_size, dtype=torch.float, device=device)
+        else:
+            decoder_input = torch.zeros(1, self.element_size, dtype=torch.float, device=device)
+
         decoder_hidden = encoder_hidden
         decoder_outputs = []
 
@@ -80,9 +84,12 @@ class DecoderRNN(nn.Module):
             else:
                 # Without teacher forcing: use its own predictions as the next input
                 _, topi = decoder_output.topk(1)
-                decoder_input = topi.squeeze(-1).detach()  # detach from history as input
-
-        decoder_outputs = torch.cat(decoder_outputs, dim=1)
+                # decoder_input = topi.squeeze(-1).detach()  # detach from history as input
+                decoder_input = torch.FloatTensor(decoder_output).detach()
+        if target_tensor is not None:
+            decoder_outputs = torch.cat(decoder_outputs, dim=1)
+        else:
+            decoder_outputs = torch.cat(decoder_outputs, dim=0)
         # decoder_outputs = F.log_softmax(decoder_outputs, dim=-1)
         return decoder_outputs, decoder_hidden, None  # We return `None` for consistency in the training loop
 
@@ -204,6 +211,7 @@ def make_dataloader(batch_size):
 
 
 def to_sequence(data):
+    # reuse some elements to form new sequences to generate more data. Then there is enough data.
     seq = []
     clear_data = []
     element_length = len(data[0])
@@ -285,5 +293,37 @@ def main2():
     train(train_dataloader, encoder, decoder, n_epochs=30, print_every=5, plot_every=5)  # learning_rate
 
 
+def in_loop(data, encoder, decoder, sequence, l):
+    # import sklearn as sklearn
+    out, hid = encoder(torch.FloatTensor(sequence))
+    result, _, _ = decoder(out, hid)
+    real_l = l(result, torch.FloatTensor(sequence)).item()
+    while sequence in data:
+        data.remove(sequence)
+    for i in data:
+        if l(result, torch.FloatTensor(i)).item() < real_l:
+            return False
+    return True
+
+
+def acc(data='allObjectsTwitterEncodedNumpy.npy'):
+    data = np.load(data).tolist()
+    data = to_sequence(data)
+    encoder, decoder = train_model(data=data, n_epochs=60)
+    l = torch.nn.MSELoss()
+    good = 0
+    for sequence in data:
+        if in_loop(data, encoder, decoder, sequence, l):
+            good += 1
+    return good / len(data)
+
+    # choose or generate random sequence
+    # encode-decode it
+    # compare result with all sequences
+    # see how often right one is closest => calculate accuracy
+
+
 if __name__ == '__main__':
-    train_model(data='allObjectsTwitterEncodedNumpy.npy')
+    print(acc())
+    # TODO use BCE to reduce error!
+    # train_model(data='allObjectsTwitterEncodedNumpy.npy', n_epochs=30)
