@@ -32,6 +32,8 @@ TODO Other:
     - build translations from different formats of adventures to the universal and back
         - generate board-games from JSON!
 
+Storysphere ist eine Wahrsagekugel für die Story. ?
+
 
 
 
@@ -53,4 +55,16 @@ Wie funktioniert detaillierte Kodierung?
     - use RNN
 Jedes einzelne Objekt wird kodiert.
     - Da alle möglichen Objektklassen nur endlich viele Features haben, kann jedes einzelne Objekt einfach hardcoded kodiert werden.
-    - 
+    -
+
+
+Frontend-Backend Kommunikation:
+- User ruft Seite auf
+- webserver erhält request an /index funktion
+- /index funktion rendert html file
+    - mit variable abenteuer
+    - ruft js und css auf
+- html file enthält forms
+- user drückt auf submit button für ein Form
+- html führt einen redirect aus
+- webserver erhält neue request an andere unterseite
