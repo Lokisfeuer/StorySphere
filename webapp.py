@@ -42,6 +42,27 @@ def return_template(session, prefill=None, to_save=None):
 
 @app.route('/')
 def index():
+    '''
+    <script>
+        var myHyperVariable;
+        myHyperVariable="{variable}";
+    </script>
+    <script>
+        function myFunction() {
+            document.getElementById("123").value = myHyperVariable;
+        }
+    </script>
+    <input type="text" id="123" name="first_name">
+    <button onclick="myFunction()">The Click</button>'''
+    variable = 'Hi'
+    variable = f'''<script>
+    var myHyperVariable;
+    myHyperVariable="{variable}";
+</script>
+'''
+    variable = Markup(variable)
+    # val = f'<script>var myHyperVariable; myHyperVariable="{variable}";</script>'
+    return render_template('main.html', variable=variable)
     # if 'username' not in session:
     #    return redirect(url_for('login'))
     # current_object = Markup('''<p><input type=text name=username>''')

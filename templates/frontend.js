@@ -1,8 +1,7 @@
-function IDexists(id) {
-    const element = document.getElementById(id);
-    // If it isn't "undefined" and it isn't "null", then it exists.
-    return typeof (element) != 'undefined' && element != null;
+function myFunction() {
+    document.getElementById("123").value = "myHyperVariable";
 }
+
 function getall(otype, aspect='name') {
     var id = "string";
     var names = [];

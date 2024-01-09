@@ -6,10 +6,19 @@
     </head>
 
     <body>
+        {{ variable }}
+        <!-- <script type="text/javascript" src="frontend.js"></script> --!>
+        <script>
+            function myFunction() {
+                document.getElementById("123").value = myHyperVariable;
+            }
+        </script>
         <h2>Current object you are editing.</h2>
         here are supposed to be all features of the object you are currently editing.
         <!--<form method="POST" action="/save">{{ current_object }}<input type=submit value="save"></form>-->
         {{ current_object }}
+        <input type="text" id="123" name="first_name">
+        <button onclick="myFunction()">Click</button>
 
         <h2>Create new Object</h2>
         here are supposed to be the create new and blank new buttons.
