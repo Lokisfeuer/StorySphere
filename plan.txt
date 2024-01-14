@@ -13,9 +13,20 @@ Der AI-clou: Die Website gibt intelligente Vorschläge beim Schreiben des Abente
 Architektur der AI: siehe ai_architecture
 GUI: Frontend-Ma
 
+Gesamter Input - vernünftige JSon's -
+v
+v ANNA - Input -> Real-Encoding
+v ^10x^
+v
+v Bernd - Liste Real-Encodings -> Object-Class
+v
+v Charline - Object-Class -> komprimiert -> output
+v
+Output - Vector -
+
 TODO AI:
-    - Anna's accuracy testen und auf >90% heben
-    - pre-encode Anna
+    - Anna's accuracy testen und auf >90% heben //
+    - pre-train Anna
     - write function for real-encodings (using Anna)
     - train Bernd (Bernd summarizes all objects of an ObjectClass to one)
     - train charlene
