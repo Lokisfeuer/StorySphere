@@ -212,7 +212,7 @@ def train_model(data, hidden_size=128, batch_size=32, n_epochs=30, print_every=5
     # what about .csv files?
     if isinstance(data, str):
         if data.endswith('.npy'):
-            data = np.load('allObjectsTwitterEncodedNumpy.npy')
+            data = np.load(data)
             data = data.tolist()
         elif data.endswith('.pickle'):
             import pickle
@@ -265,7 +265,7 @@ def scramble_data(data, n=3):
     return seqs, to_sequence(data)
 
 
-def acc(data='allObjectsTwitterEncodedNumpy.npy'):
+def acc(data='allObjectsTwitterEncoded.npy'):
     data = np.load(data).tolist()
     data, val_data = scramble_data(data)
     encoder, decoder = train_model(data=data, n_epochs=60)
@@ -288,4 +288,4 @@ def acc(data='allObjectsTwitterEncodedNumpy.npy'):
 if __name__ == '__main__':
     print(acc())
     # TODO use BCE to reduce error!
-    # train_model(data='allObjectsTwitterEncodedNumpy.npy', n_epochs=30)
+    # train_model(data='allObjectsTwitterEncoded.npy', n_epochs=30)
