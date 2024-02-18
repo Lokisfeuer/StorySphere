@@ -87,6 +87,15 @@ all_features = {
     }
 }
 
+# id_type = {}
+#
+# for keys in all_features.keys():
+#     for feature in all_features[keys]["list_ids"]:
+#         id_type[feature] = "?" # this sets all types to "?" and requires manual inputs
+#
+# print(id_type)
+
+id_type = {'startszene': '?', 'events': '?', 'gruppen': '?', 'backstory_sonstiges': '?', 'wer': '?', 'wo': '?', 'Gegenstände': '?', 'Geheimnisse': '?', 'personen': '?', 'wer_muss_da_sein': '?', 'wo_kann_das_sein': '?', 'motivationen': '?', 'events_und_szenen': '?', 'wer_weiss_davon': '?', 'wen_und_was_betrifft_das': '?', 'wessen': '?'}
 
 '''
 This class is the central structure for an adventure. It's supposed to be convertible to virtually any other 
