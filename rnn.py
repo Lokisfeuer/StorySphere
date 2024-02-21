@@ -265,6 +265,7 @@ def scramble_data(data, n=3):
     return seqs, to_sequence(data)
 
 
+# TODO: give this function all necessary parameters
 def acc(data='allObjectsTwitterEncoded.npy'):
     data = np.load(data).tolist()
     data, val_data = scramble_data(data)

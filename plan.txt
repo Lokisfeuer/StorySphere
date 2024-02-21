@@ -26,7 +26,7 @@ Output - Vector -
 
 TODO AI:
     - Anna's accuracy testen und auf >90% heben //
-    - pre-train Anna
+    - pre-train Anna /
     - write function for real-encodings (using Anna)
     - train Bernd (Bernd summarizes all objects of an ObjectClass to one)
     - train charlene

@@ -104,6 +104,7 @@ readable representation of an adventure (in a high-dimensional vector field). Al
 representation, maybe a representation that uses a lot of graphics, a representation that would work as a computer 
 game like the AI-RPG project, the adventure as a board game and so on.
 '''
+
 class Adventure:
     def __init__(self, name):
         self.name = name
@@ -203,6 +204,7 @@ class Adventure:
         return json.dumps(to_save, indent=4)
 
     def to_text(self):
+        # raise NotImplementedError
         return 'Adventure to text doesn\'t really work yet.'
 
 

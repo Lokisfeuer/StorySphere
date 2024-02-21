@@ -1,5 +1,5 @@
 import json
-from encode_adventure import Adventure, all_features
+from old_encode_adventure import Adventure, all_features
 
 
 def get_adventure(username, adventure, object_type, prefill, to_save):
