@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, session, redirect, url_for
 from markupsafe import Markup
-import main as main
+import old_main as main
 import os
 
 app = Flask(__name__)
