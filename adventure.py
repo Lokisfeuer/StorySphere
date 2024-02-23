@@ -65,7 +65,7 @@ class Adventure:
                 adventure[unit_type].append(unit.to_dict())
         return adventure
 
-    def to_vector(self):
+    def to_vector(self, use_autoencoder=True):
         # return the vector representation of the Adventure.
 
         # generate pre encodings
@@ -77,16 +77,18 @@ class Adventure:
         real_encodings = {}
         for unit_type, list_of_units in self.all_units.items():
             real_encodings.update({unit_type: []})
-            for unit in unit_type:
+            for unit in self.all_units[unit_type]:
                 # which version is cleaner?
                 # real_encodings[unit_type].append(unit.real_encode())
                 unit.real_encode()
                 real_encodings[unit_type].append(unit.real_encoding)
 
-        # todo:
+        # TODO:
         # feed real encodings into AI
         # concat results
-        # feed results into AutoEncoder AI
+        if use_autoencoder:
+            pass
+            # feed results into AutoEncoder AI
         # return vector representation
 
     def to_text(self):
@@ -150,7 +152,8 @@ class Unit:
         return self.real_encoding
 
     def set_features(self):
-        return {}
+        self.features = {}
+        return
 
 
 # advantage of this is mostly, that now type(id) does not produce integer or string but UnitId.
@@ -159,12 +162,13 @@ UnitId = namedtuple('UnitId', 'unit_type nr')
 
 class NotPlayerCharacter(Unit):
     def check_datatypes(self, feature_values):
-        if type(feature_values['name']) is not str:
-            raise ValueError(f"Name must be a string. Got {type(feature_values['name'])} instead.")
+        for feature, value in feature_values.items():
+            if feature == 'name' and type(value) != 'string':
+                raise ValueError(f"Name must be a string. Got {type(feature_values['name'])} instead.")
         return
 
     def set_features(self):
-        self.features = []
+        self.features = {}
 
 all_unit_types = [NotPlayerCharacter]
 
