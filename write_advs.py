@@ -14,6 +14,8 @@ def multi_for_loop(iterations):
     if 0 in iterations:
         raise ValueError(f'Amount of iterations must for all instances be greater than zero. '
                          f'Received the following amounts of iterations per instance: {iterations}')
+    if iterations == []:
+        return
     while True:
         indeces[-1] += 1
         x = 0
@@ -48,9 +50,9 @@ def adventure_pre_ai():
     twitter = twitter['clean_text']
     twitter = twitter.dropna(axis=0, how='all')
     twitter = twitter.reset_index(drop=True)
-    twitterator = 5
+    twitterator = 5  # first few entries are sometimes trash. So start at entry 5.
 
-    # all possible entries for each feature datatype.
+    # all possible values for each feature datatype.
     options = \
         {
             bool: [True, False],  # there are 2 options for boolean features
@@ -110,7 +112,7 @@ def all_pre_encodings():
     return all_pres
 
 
-def many_smaller_adventure(n=10000):
+def many_small_adventures(n=10000):
     # generate n adventures of a realistic size. Every object has some relation to the others.
     # purpose is to train the real_encoding function with these adventures as data.
     all_adventures = []
@@ -138,5 +140,34 @@ def many_smaller_adventure(n=10000):
                         raise ValueError('Something went wrong unexpectedly. Please fix.')
 
             adventure.add_unit(unit.__class__(**feature_values))  # recreate unit with relations.
-        all_adventures.append(adventure)
-    return all_adventures
+        yield adventure
+
+
+def gen_real_encodings():
+    for adventure in many_small_adventures():
+        # generate pre encodings
+        for list_of_units in adventure.all_units.values():
+            for unit in list_of_units:
+                unit.pre_encode()
+
+        # get real encodings
+        real_encodings = {}
+        for unit_type, list_of_units in adventure.all_units.items():
+            real_encodings.update({unit_type: []})
+            for unit in adventure.all_units[unit_type]:
+                # which version is cleaner?
+                # real_encodings[unit_type].append(unit.real_encode())
+                unit.real_encode()
+                real_encodings[unit_type].append(unit.real_encoding)
+        yield real_encodings
+
+
+def all_real_encodings():
+    data = {}
+    for real_encodings in gen_real_encodings():
+        for unit_type in real_encodings.keys():
+            if unit_type not in data.keys():
+                data.update({unit_type: []})
+            data[unit_type].append([real_encoding for real_encoding in real_encodings[unit_type]])
+    return data
+
