@@ -1,20 +1,18 @@
 # This file is mediocral clean and mostly copied from here:
 # https://www.geeksforgeeks.org/implementing-an-autoencoder-in-pytorch/
+import random
+
 import torch
 import matplotlib.pyplot as plt
 
 import math
 
 
-# Creating a PyTorch class
-# 28*28 ==> 9 ==> 28*28
 class AutoEncoder(torch.nn.Module):
     def __init__(self, input_size, encoding_size=1024):
         super().__init__()
 
-        # Building a linear encoder with Linear
-        # layer followed by Relu activation function
-        # 784 ==> 9
+        # Encodes inputs in five layers gradually getting smaller to encoding size.
         stepsize = math.ceil((input_size - encoding_size) / 5)
         self.encoder = torch.nn.Sequential(
             torch.nn.Linear(input_size, input_size - stepsize),
@@ -26,13 +24,10 @@ class AutoEncoder(torch.nn.Module):
             torch.nn.Linear(input_size - 3 * stepsize, input_size - 4 * stepsize),
             torch.nn.ReLU(),
             torch.nn.Linear(input_size - 4 * stepsize, encoding_size)
+            # maybe add a Sigmoid layer here to normalize encodings?
         )
 
-        # Building a linear decoder with Linear
-        # layer followed by Relu activation function
-        # The Sigmoid activation function
-        # outputs the value between 0 and 1
-        # 9 ==> 784
+        # reverses encoding process.
         self.decoder = torch.nn.Sequential(
             torch.nn.Linear(encoding_size, input_size - 4 * stepsize),
             torch.nn.ReLU(),
@@ -43,16 +38,17 @@ class AutoEncoder(torch.nn.Module):
             torch.nn.Linear(input_size - 2 * stepsize, input_size - 1 * stepsize),
             torch.nn.ReLU(),
             torch.nn.Linear(input_size - 1 * stepsize, input_size),
-            torch.nn.Sigmoid()
         )
 
     def forward(self, x):
+        # encode-decode-return
+        # useful for training and accuracy testing. Not good for inference (actual usage).
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
         return decoded
 
 
-def train(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8):
+def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8):
     input_size = len(data[0])
     data = torch.Tensor(data)
 
@@ -97,3 +93,35 @@ def train(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weigh
     plt.plot(losses[-100:])
 
     return model.encoder, model.decoder
+
+
+def check(data, encoder, decoder, sample, l):
+    # import sklearn as sklearn
+    out = encoder(torch.Tensor(sample))
+    result = decoder(out)
+    real_l = l(result, torch.Tensor(sample)).item()
+    while sample in data:
+        data.remove(sample)
+    for i in data:
+        if l(result, torch.FloatTensor(i)).item() < real_l:
+            return False
+    return True
+
+def acc(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8)
+    eval_len = round(len(data) * 0.1)
+    val_data = random.sample(data, eval_len)
+    for i in val_data:
+        while i in data:
+            data.remove(i)
+    encoder, decoder = train_model(data, encoding_size, epochs, loss_function, lr, weight_decay)
+
+    l = torch.nn.MSELoss()
+    good = 0
+    for sample in data:
+        if check(data, encoder, decoder, sample, l):
+            good += 1
+    val_good = 0
+    for sample in val_data:
+        if check(val_data, encoder, decoder, sample, l):
+            good += 1
+    return good / len(data), val_good / len(val_data)
