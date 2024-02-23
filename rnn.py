@@ -265,11 +265,20 @@ def scramble_data(data, n=3):
     return seqs, to_sequence(data)
 
 
-# TODO: give this function all necessary parameters
-def acc(data='allObjectsTwitterEncoded.npy'):
-    data = np.load(data).tolist()
-    data, val_data = scramble_data(data)
-    encoder, decoder = train_model(data=data, n_epochs=60)
+# TODO: test this function
+def acc(train_parameters):
+    if 'data' not in train_parameters.keys() or 'val_data' not in train_parameters.keys():
+        data = 'allObjectsTwitterEncoded.npy'
+        data = np.load(data).tolist()
+        data, val_data = scramble_data(data)
+    else:
+        data = train_parameters['data']
+        val_data = train_parameters['val_data']
+    possible_train_parameters = ['hidden_size', 'batch_size', 'n_epochs', 'print_every', 'plot_every', 'lr', 'encoder_optimizer', 'decoder_optimizer', 'criterion']
+    for i in train_parameters.keys():
+        if i not in possible_train_parameters:
+            del train_parameters[i]
+    encoder, decoder = train_model(data=data, **train_parameters)
     l = torch.nn.MSELoss()
     good = 0
     for sequence in data:
