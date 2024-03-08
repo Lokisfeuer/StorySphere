@@ -52,7 +52,7 @@ possible feature types:
 
 
 def adventure_pre_ai():
-    # write a giant adventure to train the AI that will interpret lists of pre-encodings.
+    # write a giant adventure to train the AI that will interpret lists of pre-encodings (Anna).
     # like in old_encode_adventure the generate_adventure_objs() function
 
     # load and prepare twitter dataset to use for texts
@@ -104,6 +104,7 @@ def adventure_pre_ai():
                 else:
                     raise ValueError('Something went unexpectedly wrong. ')
             mega_adventure.add_unit(unit_type(**choice))
+
     # the next line adds one faulty unit to test the test function.
     # mega_adventure.add_unit(unit_type(npc_id1=mega_adventure.add_unit(unit_type(**choice))))
     check_mega_adventure(mega_adventure)  # just testing if everything is all right.
@@ -145,7 +146,7 @@ def many_small_adventures(n=10000):
         for unit in units_for_this_adventure:
             id_list.append(adventure.add_unit(unit))  # adventure.add_unit gives back the UnitId
 
-        # a bit of testing that everything is all right
+        # a bit of testing that everything is all right TODO: Use assert for this part
         check_adventure(adventure)
         new_ids = []  # necessary for later tests (at the end of function)
         if len(id_list) != len(units_for_this_adventure):
@@ -225,13 +226,13 @@ def check_unit_list(unit_list):
             raise ValueError()
 
 
-def gen_real_encodings():
+def gen_real_encodings(n=100):
     # generate a lot of real encodings
     # purpose is to generate training data to train Bernd rnn
     # yields a dict {unit type: list of real encodings, ...} for each adventure.
 
     # iterate over n small adventures
-    for adventure in many_small_adventures(n=100):  # TODO: parameterize this n properly
+    for adventure in many_small_adventures(n=n):
         # This is similar to the to_vector function of an adventure (which can't be used before all AIs including
         # Bernd are trained)
 
@@ -250,9 +251,9 @@ def gen_real_encodings():
         yield real_encodings
 
 
-def all_real_encodings():
+def all_real_encodings(n=100):
     data = {}
-    for real_encodings in gen_real_encodings():
+    for real_encodings in gen_real_encodings(n=n):
         for unit_type in real_encodings.keys():
             if unit_type not in data.keys():
                 data.update({unit_type: []})

@@ -15,17 +15,15 @@ import time
 import math
 
 
-# TODO: Deal more intelligently with global variables.
-plt.switch_backend('agg')
+# plt.switch_backend('agg')  # I don't know what this does.
 
+# SOS_token = 0
+# EOS_token = 1
+
+# TODO: use device properly and test this.
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-SOS_token = 0
-EOS_token = 1
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-MAX_LENGTH = 40  # change this only when seq2seq.py is not used anymore
+# MAX_LENGTH = 40  # change this only when seq2seq.py is not used anymore
 
 
 class CustomDataset(Dataset):
@@ -63,26 +61,28 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    def __init__(self, hidden_size, output_size):
+    def __init__(self, hidden_size, output_size, max_length):
         super(DecoderRNN, self).__init__()
         # input size equals output size
         self.gru = nn.GRU(output_size, hidden_size, batch_first=True)
         self.out = nn.Linear(hidden_size, output_size)
         self.element_size = output_size
+        self.max_length = max_length
 
     def forward(self, encoder_outputs, encoder_hidden, target_tensor=None):
         if target_tensor is not None:
             batch_size = encoder_outputs.size(0)
-            decoder_input = torch.empty(batch_size, 1, self.element_size, dtype=torch.float,
-                                        device=device)  # TODO: find a good start token
+            decoder_input = torch.empty(batch_size, 1, self.element_size, dtype=torch.float, device=device)  # TODO: find a good start token
             decoder_input = torch.zeros(batch_size, 1, self.element_size, dtype=torch.float, device=device)
+            decoder_input = torch.full(size=(batch_size, 1, self.element_size), fill_value=1., dtype=torch.float, device=device)
         else:
             decoder_input = torch.zeros(1, self.element_size, dtype=torch.float, device=device)
+            decoder_input = torch.full(size=(1, self.element_size), fill_value=1., dtype=torch.float, device=device)
 
         decoder_hidden = encoder_hidden
         decoder_outputs = []
 
-        for i in range(MAX_LENGTH):
+        for i in range(self.max_length):
             decoder_output, decoder_hidden = self.forward_step(decoder_input, decoder_hidden)
             decoder_outputs.append(decoder_output)
 
@@ -151,13 +151,10 @@ def timeSince(since, percent):
 
 
 def train(train_dataloader, encoder, decoder, n_epochs, lr=0.001,
-          print_every=100, plot_every=100, encoder_optimizer=None, decoder_optimizer=None, criterion=None):
-    if criterion is None:
-        criterion = nn.MSELoss()
-    if encoder_optimizer is None:
-        encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
-    if decoder_optimizer is None:
-        decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr)
+          print_every=100, plot_every=100, encoder_optimizer=None, decoder_optimizer=None, loss_function=None):
+    if loss_function is None:
+        loss_function = nn.MSELoss()
+    assert encoder_optimizer is not None and decoder_optimizer is not None
 
     start = time.time()
     plot_losses = []
@@ -165,7 +162,7 @@ def train(train_dataloader, encoder, decoder, n_epochs, lr=0.001,
     plot_loss_total = 0  # Reset every plot_every
 
     for epoch in range(1, n_epochs + 1):
-        loss = train_epoch(train_dataloader, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion)
+        loss = train_epoch(train_dataloader, encoder, decoder, encoder_optimizer, decoder_optimizer, loss_function)
         print_loss_total += loss
         plot_loss_total += loss
 
@@ -191,25 +188,26 @@ def showPlot(points):
     ax.yaxis.set_major_locator(loc)
     plt.plot(points)
     plt.savefig("enc_adv_graph.png")
+    plt.show()
     print('rnn.py finished and saved .png file.')
 
 
-def to_sequence(data):
+def to_sequence(data, max_length):
     # reuse some elements to form new sequences to generate more data. Then there is enough data.
     seq = []
     clear_data = []
     element_length = len(data[0])
     for i in range(len(data)):
         seq.append(data[i])
-        if len(seq) == 10 or random.random() > 0.9:
-            while len(seq) < 40:  # todo: parameterize this properly
+        if len(seq) == max_length or random.random() > 0.9:  # todo: parameterize this properly
+            while len(seq) < max_length:
                 seq.append([0. for _ in range(element_length)])
             clear_data.append(seq)
             seq = []
     return clear_data
 
 
-def train_model(data, hidden_size=128, batch_size=32, n_epochs=30, print_every=5, plot_every=5, lr=0.001, encoder_optimizer=None, decoder_optimizer=None, criterion=None):
+def train_model(data, max_length=50, hidden_size=128, batch_size=32, n_epochs=30, print_every=5, plot_every=5, lr=0.001, loss_function=None):
     # this top part is not tested.
     # what about .csv files?
     if isinstance(data, str):
@@ -225,7 +223,7 @@ def train_model(data, hidden_size=128, batch_size=32, n_epochs=30, print_every=5
             with open(data, 'r') as f:
                 data = json.load(f)
     if not isinstance(data[0][0], list):
-        data = to_sequence(data)
+        data = to_sequence(data, max_length)
     else:
         pass  # check for lengths and if necessary add zeros until all sequences are length = MAX_LENGTH
     # data is a list of sequences
@@ -239,9 +237,13 @@ def train_model(data, hidden_size=128, batch_size=32, n_epochs=30, print_every=5
     dataloader = DataLoader(data, batch_size=batch_size, shuffle=True)
 
     encoder = EncoderRNN(element_length, hidden_size).to(device)
-    decoder = DecoderRNN(hidden_size, element_length).to(device)
+    decoder = DecoderRNN(hidden_size, element_length, max_length).to(device)
 
-    train(dataloader, encoder, decoder, n_epochs=n_epochs, print_every=print_every, plot_every=plot_every, lr=lr, encoder_optimizer=encoder_optimizer, decoder_optimizer=decoder_optimizer, criterion=criterion)
+    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
+    decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr)
+
+    train(dataloader, encoder, decoder, n_epochs=n_epochs, print_every=print_every, plot_every=plot_every, lr=lr,
+          encoder_optimizer=encoder_optimizer, decoder_optimizer=decoder_optimizer, loss_function=loss_function)
 
     return encoder, decoder
 
@@ -259,28 +261,38 @@ def check(data, encoder, decoder, sequence, l):
     return True
 
 
-def scramble_data(data, n=3):
+def scramble_data(data, n=3, max_length=None):
+    assert max_length is not None
     seqs = []
     for i in range(n):
-        seqs = seqs + to_sequence(data)
+        seqs = seqs + to_sequence(data, max_length)
         random.shuffle(data)
-    return seqs, to_sequence(data)
+    return seqs, to_sequence(data, max_length)
 
 
 # TODO: test this function
-def acc(train_parameters):
+def acc(**train_parameters):
+    # if this function does not get val_data it assumes data is a list of elements that still needs to be organized
+    # as a bunch of sequences.
     if 'data' not in train_parameters.keys() or 'val_data' not in train_parameters.keys():
-        data = 'allObjectsTwitterEncoded.npy'
-        data = np.load(data).tolist()
-        data, val_data = scramble_data(data)
+        if 'data' not in train_parameters.keys():
+            data = 'allObjectsTwitterEncoded.npy'
+            data = np.load(data).tolist()
+            train_parameters['data'] = data
+        if 'max_length' not in train_parameters.keys():
+            train_parameters['max_length'] = 50
+        data, val_data = scramble_data(train_parameters['data'], max_length=train_parameters['max_length'])
     else:
         data = train_parameters['data']
         val_data = train_parameters['val_data']
-    possible_train_parameters = ['hidden_size', 'batch_size', 'n_epochs', 'print_every', 'plot_every', 'lr', 'encoder_optimizer', 'decoder_optimizer', 'criterion']
-    for i in train_parameters.keys():
-        if i not in possible_train_parameters:
-            del train_parameters[i]
+
+    possible_train_parameters = ['hidden_size', 'max_length', 'batch_size', 'n_epochs', 'print_every', 'plot_every', 'lr', 'loss_function']
+    train_parameters.pop('data')
+    if 'val_data' in train_parameters.keys():
+        train_parameters.pop('val_data')
+    assert all(item in possible_train_parameters for item in train_parameters.keys())
     encoder, decoder = train_model(data=data, **train_parameters)
+
     l = torch.nn.MSELoss()
     good = 0
     for sequence in data:
@@ -289,7 +301,7 @@ def acc(train_parameters):
     val_good = 0
     for sequence in val_data:
         if check(val_data, encoder, decoder, sequence, l):
-            good += 1
+            val_good += 1
     return good / len(data), val_good / len(val_data)
     # choose or generate random sequence
     # encode-decode it

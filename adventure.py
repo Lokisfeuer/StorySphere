@@ -184,8 +184,6 @@ class NotPlayerCharacter(Unit):
     def real_encode(self, adventure):
         self.real_encoding = self.pre_encoding + adventure[self.feature_values['npc_id1']].pre_encoding
         # if necessary, use Anna encoder.
-        # TODO: make this not return anything.
-        return self.real_encoding
 
 
 all_unit_types = [NotPlayerCharacter]

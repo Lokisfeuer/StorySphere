@@ -1,5 +1,3 @@
-# TODO: why the hell do I get so giant losses?
-
 # This file is mediocre clean and mostly copied from here:
 # https://www.geeksforgeeks.org/implementing-an-autoencoder-in-pytorch/
 import random
@@ -39,7 +37,7 @@ class AutoEncoder(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(input_size - 2 * stepsize, input_size - 1 * stepsize),
             torch.nn.ReLU(),
-            torch.nn.Linear(input_size - 1 * stepsize, input_size),
+            torch.nn.Linear(input_size - 1 * stepsize, input_size)
         )
 
     def forward(self, x):
@@ -50,7 +48,7 @@ class AutoEncoder(torch.nn.Module):
         return decoded
 
 
-def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8):
+def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.0001, weight_decay=1e-8):
     input_size = len(data[0])
     data = torch.Tensor(data)
 
@@ -74,6 +72,7 @@ def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1,
             reconstructed = model(element)
 
             # Calculating the loss function
+            loss_function = torch.nn.MSELoss()
             loss = loss_function(reconstructed, element)
 
             # The gradients are set to zero,
@@ -108,8 +107,7 @@ def check(data, encoder, decoder, sample, l):
     out = encoder(torch.Tensor(sample))
     result = decoder(out)
     real_l = l(result, torch.Tensor(sample)).item()
-    while sample in data:
-        data.remove(sample)
+
     for i in data:
         if l(result, torch.FloatTensor(i)).item() < real_l:
             return False
@@ -119,21 +117,32 @@ def check(data, encoder, decoder, sample, l):
 def acc(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8):
     # this function is untested.
     eval_len = round(len(data) * 0.1)
-    val_data = random.sample(data, eval_len)
-    for i in val_data:
-        while i in data:
-            data.remove(i)
-    encoder, decoder = train_model(data, encoding_size, epochs, loss_function, lr, weight_decay)
-
+    random.shuffle(data)
+    val_data = data[:eval_len]
+    data = data[eval_len:]
+    encoder, decoder = train_model(torch.stack(data), encoding_size, epochs, loss_function, lr, weight_decay)
     l = torch.nn.MSELoss()
+
+    # get training accuracy
     good = 0
-    for sample in data:
-        if check(data, encoder, decoder, sample, l):
+    for sample, idx in zip(data, range(len(data))):
+        data_for_this = []
+        for i, j in zip(data, range(len(data))):
+            if j != idx:
+                data_for_this.append(i)
+        if check(data_for_this, encoder, decoder, sample, l):
             good += 1
+
+    # get validation accuracy
     val_good = 0
-    for sample in val_data:
-        if check(val_data, encoder, decoder, sample, l):
-            good += 1
+    for sample, idx in zip(val_data, range(len(val_data))):
+        data_for_this = []
+        for i, j in zip(val_data, range(len(val_data))):
+            if j != idx:
+                data_for_this.append(i)
+        if check(data_for_this, encoder, decoder, sample, l):
+            val_good += 1
+
     return good / len(data), val_good / len(val_data)
 
 
@@ -142,4 +151,4 @@ if __name__ == "__main__":
     for i in range(100):
         randomlist = random.sample(range(1, 1000), 50)
         data.append(randomlist)
-    train_model(data, epochs=2)
+    print(acc(data, epochs=2))
