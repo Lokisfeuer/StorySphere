@@ -2,6 +2,7 @@ import random
 
 from adventure import *
 import pandas as pd
+import copy
 
 
 # import adventure
@@ -10,12 +11,21 @@ import pandas as pd
 
 def multi_for_loop(iterations):
     # a generator to iterate like multiple for loops but the amount is dynamic
+    '''
+    m, n, o, ... = *iterations
+    for i in range(m):
+        for j in range(n):
+            for k in range(o):
+                ...
+                    yield [i, j, k, ...]
+    '''
     indeces = [0 for _ in iterations]
     if 0 in iterations:
         raise ValueError(f'Amount of iterations must for all instances be greater than zero. '
                          f'Received the following amounts of iterations per instance: {iterations}')
-    if iterations == []:
+    if not iterations:
         return
+    yield indeces
     while True:
         indeces[-1] += 1
         x = 0
@@ -58,7 +68,7 @@ def adventure_pre_ai():
             bool: [True, False],  # there are 2 options for boolean features
             float: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
             # there are infinite options for floats. I round them to 10 options
-            int: list(range(10))  # there are infinite options for integers. I just take the first 10 options.
+            int: list(range(11))  # there are infinite options for integers. I just take the first 11 options.
             # there are infinite options for strings. I take only one but that is always a unique tweet from Twitter.
         }
     mega_adventure = Adventure()
@@ -79,7 +89,7 @@ def adventure_pre_ai():
             for feature, feature_type in features.items():
                 if feature_type in options.keys():
                     # nth feature in the options
-                    choice.update({feature: specific_options[indeces[n]]})
+                    choice.update({feature: specific_options[n][indeces[n]]})
                     n += 1
                 elif feature_type is str:
                     # take a tweet from Twitter as text.
@@ -93,7 +103,11 @@ def adventure_pre_ai():
                     pass  # can be ignored for pre-encodings
                 else:
                     raise ValueError('Something went unexpectedly wrong. ')
-            mega_adventure.add(unit_type(**choice))
+            mega_adventure.add_unit(unit_type(**choice))
+    # the next line adds one faulty unit to test the test function.
+    # mega_adventure.add_unit(unit_type(npc_id1=mega_adventure.add_unit(unit_type(**choice))))
+    check_mega_adventure(mega_adventure)  # just testing if everything is all right.
+    check_adventure(mega_adventure)  # also just testing.
     return mega_adventure
 
 
@@ -115,10 +129,15 @@ def all_pre_encodings():
 def many_small_adventures(n=10000):
     # generate n adventures of a realistic size. Every object has some relation to the others.
     # purpose is to train the real_encoding function with these adventures as data.
-    all_adventures = []
-    units = list(all_units)  # the list of all units from adventure_pre_ai
+
+    # get a list of all possible units (without relations)
+    units = list(all_units(adventure_pre_ai()))  # this object is mutable
+    check_unit_list(units)  # checking that no Unit has an id set yet
+
+    # iterate n times. at the end of each iteration yield one adventure
     for i in range(n):
         units_for_this_adventure = random.sample(units, random.randint(15, 30))
+        check_unit_list(units_for_this_adventure)  # checking that no Unit has an id set
 
         # generate a list of all ids that could appear in this adventure.
         id_list = []
@@ -126,26 +145,97 @@ def many_small_adventures(n=10000):
         for unit in units_for_this_adventure:
             id_list.append(adventure.add_unit(unit))  # adventure.add_unit gives back the UnitId
 
+        # a bit of testing that everything is all right
+        check_adventure(adventure)
+        new_ids = []  # necessary for later tests (at the end of function)
+        if len(id_list) != len(units_for_this_adventure):
+            raise ValueError
+        should_be_nr = 0
+        for j in id_list:
+            if should_be_nr != j.nr:
+                raise ValueError
+            should_be_nr += 1
+
+        # write new adventure with the same units but with values for UnitIds that reference other units from the
+        # adventure.
         adventure = Adventure()
         for unit in units_for_this_adventure:  # iterate over every unit
-            feature_values = unit.feature_values  # get feature values
+            feature_values = copy.deepcopy(unit.feature_values)  # get feature values
+            # deepcopy is necessary because otherwise id_list would be mutated which is one hell of an error.
+
+            # iterating over every feature that the unit could have (including relations)
             for feature, feature_type in unit.features.items():
-                #  add relations between units to feature values
-                if feature not in feature_values.keys():
+                if feature not in feature_values.keys():  # check if feature is not yet set (which means its a relation)
+                    #  add relations between units to feature values
                     if feature_type == UnitId:
                         feature_values.update({feature: random.choice(id_list)})
-                    elif feature_type == tuple:  # the actual feature should in this case be a list
+                    elif feature_type == tuple:  # the actual feature should in this case be a list of UnitIds
+                        if feature_type == UnitId:
+                            # this case should never happen because UnitIds are caught earlier.
+                            raise ValueError("??")
                         feature_values.update({feature: random.sample(id_list, random.randint(3, 10))})
                     else:
+                        # this means a feature was not set, and it did not expect a UnitId nor a list of UnitIds
                         raise ValueError('Something went wrong unexpectedly. Please fix.')
 
-            adventure.add_unit(unit.__class__(**feature_values))  # recreate unit with relations.
+            # recreate unit with values for UnitId features and add it to adventure.
+            newid = adventure.add_unit(unit.__class__(**feature_values))
+
+            # again some checking that things are all right
+            if newid not in id_list:
+                raise ValueError('?')
+            new_ids.append(newid)  # new_ids is also only necessary for testing.
+
+        # and even more checking
+        for unit_id in id_list:
+            if unit_id not in new_ids:
+                raise ValueError('?!')
+        check_adventure(adventure)
+        if len(adventure) != len(units_for_this_adventure):
+            raise ValueError('?')
+
         yield adventure
 
 
+# this function solemn purpose is for debugging
+def check_adventure(adventure):
+    for unit in all_units(adventure):
+        for feature, value in unit.feature_values.items():
+            if isinstance(value, UnitId):
+                referenced_unit = adventure[value]  # this line might cause an error
+
+
+# this function solemn purpose is for debugging as well
+def check_mega_adventure(mega_adventure):
+    for unit in all_units(mega_adventure):
+        if 'npc_nr1' in unit.feature_values.keys():
+            # this case is fine
+            a = 1
+            pass  # Did I mention I hate breakpoints at a pass command? They don't work.
+        if 'npc_id1' in unit.feature_values.keys():
+            # this case means something is wrong
+            a = 1
+            raise ValueError()
+
+
+# this function solemn purpose is for debugging
+def check_unit_list(unit_list):
+    for unit in unit_list:
+        if 'npc_id1' in unit.feature_values.keys():
+            raise ValueError()
+
+
 def gen_real_encodings():
-    for adventure in many_small_adventures():
-        # generate pre encodings
+    # generate a lot of real encodings
+    # purpose is to generate training data to train Bernd rnn
+    # yields a dict {unit type: list of real encodings, ...} for each adventure.
+
+    # iterate over n small adventures
+    for adventure in many_small_adventures(n=100):  # TODO: parameterize this n properly
+        # This is similar to the to_vector function of an adventure (which can't be used before all AIs including
+        # Bernd are trained)
+
+        # generate pre encodings.
         for list_of_units in adventure.all_units.values():
             for unit in list_of_units:
                 unit.pre_encode()
@@ -155,9 +245,7 @@ def gen_real_encodings():
         for unit_type, list_of_units in adventure.all_units.items():
             real_encodings.update({unit_type: []})
             for unit in adventure.all_units[unit_type]:
-                # which version is cleaner?
-                # real_encodings[unit_type].append(unit.real_encode())
-                unit.real_encode()
+                unit.real_encode(adventure)
                 real_encodings[unit_type].append(unit.real_encoding)
         yield real_encodings
 
@@ -170,4 +258,3 @@ def all_real_encodings():
                 data.update({unit_type: []})
             data[unit_type].append([real_encoding for real_encoding in real_encodings[unit_type]])
     return data
-

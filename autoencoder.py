@@ -1,4 +1,6 @@
-# This file is mediocral clean and mostly copied from here:
+# TODO: why the hell do I get so giant losses?
+
+# This file is mediocre clean and mostly copied from here:
 # https://www.geeksforgeeks.org/implementing-an-autoencoder-in-pytorch/
 import random
 
@@ -78,11 +80,15 @@ def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1,
             # the gradient is computed and stored.4
             # .step() performs parameter update
             optimizer.zero_grad()
-            loss.backward()
+            loss.backward(retain_graph=True)  # this solved a bug, but I have no idea what it does.
+            # It might even cause the model to not learn. I don't know.
             optimizer.step()
 
             # Storing the losses in a list for plotting
-            losses.append(loss)
+            losses.append(loss.item())
+
+    # losses = [i for i in losses if i < 10000]
+    losses = [i if i < 100 else 100. for i in losses]  # clean up giant losses
 
     # Defining the Plot Style
     plt.style.use('fivethirtyeight')
@@ -91,6 +97,8 @@ def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1,
 
     # Plotting the last 100 values
     plt.plot(losses[-100:])
+    plt.savefig('Charlene-loss.png')  # this function takes looong. why?
+    plt.show()  # this doesn't work reliable on my machine.
 
     return model.encoder, model.decoder
 
@@ -107,7 +115,9 @@ def check(data, encoder, decoder, sample, l):
             return False
     return True
 
-def acc(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8)
+
+def acc(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_decay=1e-8):
+    # this function is untested.
     eval_len = round(len(data) * 0.1)
     val_data = random.sample(data, eval_len)
     for i in val_data:
@@ -125,3 +135,11 @@ def acc(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.1, weight_
         if check(val_data, encoder, decoder, sample, l):
             good += 1
     return good / len(data), val_good / len(val_data)
+
+
+if __name__ == "__main__":
+    data = []
+    for i in range(100):
+        randomlist = random.sample(range(1, 1000), 50)
+        data.append(randomlist)
+    train_model(data, epochs=2)

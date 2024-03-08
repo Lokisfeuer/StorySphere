@@ -14,6 +14,8 @@ import matplotlib.ticker as ticker
 import time
 import math
 
+
+# TODO: Deal more intelligently with global variables.
 plt.switch_backend('agg')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -23,7 +25,7 @@ EOS_token = 1
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-MAX_LENGTH = 10  # change this only when seq2seq.py is not used anymore
+MAX_LENGTH = 40  # change this only when seq2seq.py is not used anymore
 
 
 class CustomDataset(Dataset):
@@ -200,7 +202,7 @@ def to_sequence(data):
     for i in range(len(data)):
         seq.append(data[i])
         if len(seq) == 10 or random.random() > 0.9:
-            while len(seq) < 10:
+            while len(seq) < 40:  # todo: parameterize this properly
                 seq.append([0. for _ in range(element_length)])
             clear_data.append(seq)
             seq = []
