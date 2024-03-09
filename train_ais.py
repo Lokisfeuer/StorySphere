@@ -5,10 +5,17 @@ import torch
 
 
 def anna():
+    lr = 0.01
+    n_epochs = 400
+    hidden_size = 200
+    weight_decay = 0
+    start_factor = 1.
+    end_factor = 0.00025
+
     data = all_pre_encodings()
-    train_accuracy, validation_accuracy = rnn.acc(data=data, n_epochs=10, plot_every=2)  # takes the same params as train_model
+    train_accuracy, validation_accuracy = rnn.acc(data=data, n_epochs=n_epochs, plot_every=2, lr=lr, hidden_size=hidden_size, weight_decay=weight_decay, start_factor=start_factor, end_factor=end_factor)  # takes the same params as train_model
     print(f'Training accuracy: {train_accuracy}, \t\tvalidation accuracy: {validation_accuracy}')
-    encoder, decoder = rnn.train_model(data, n_epochs=10, plot_every=2)
+    encoder, decoder = rnn.train_model(data, n_epochs=2, plot_every=2, lr=lr, hidden_size=hidden_size, weight_decay=weight_decay, start_factor=start_factor, end_factor=end_factor)
     torch.save(encoder, f'anna_encoder.pt')
     torch.save(decoder, f'anna_decoder.pt')
     return encoder, decoder
@@ -75,8 +82,8 @@ if __name__ == '__main__':
     #  test
 
     anna()
-    bernd()
-    charlene()
+    # bernd()
+    # charlene()
 
 # for rnn.train_model() you can adjust the following parameters within this file in the train_model() as parameters:
 # data, max_length=50, hidden_size=128, batch_size=32, n_epochs=30, print_every=5, plot_every=5, lr=0.001,

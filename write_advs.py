@@ -56,8 +56,10 @@ def adventure_pre_ai():
     # like in old_encode_adventure the generate_adventure_objs() function
 
     # load and prepare twitter dataset to use for texts
-    twitter = pd.read_csv('twitter_data.csv')
-    twitter = twitter['clean_text']
+    twitter = pd.read_csv('twitter_dataset.csv')
+    # twitter = pd.read_csv("twitter_data.csv")
+    # twitter = twitter["clean_text"]
+    twitter = twitter['Text']
     twitter = twitter.dropna(axis=0, how='all')
     twitter = twitter.reset_index(drop=True)
     twitterator = 5  # first few entries are sometimes trash. So start at entry 5.
@@ -259,3 +261,8 @@ def all_real_encodings(n=100):
                 data.update({unit_type: []})
             data[unit_type].append([real_encoding for real_encoding in real_encodings[unit_type]])
     return data
+
+if __name__ == "__main__":
+    df = pd.read_csv("twitter_dataset.csv")
+    print(df.keys())
+    print(df.head())

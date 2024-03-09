@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim
+import torch.optim.lr_scheduler as lr_scheduler
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Dataset
 import matplotlib.pyplot as plt
@@ -93,7 +94,8 @@ class DecoderRNN(nn.Module):
                 # Without teacher forcing: use its own predictions as the next input
                 _, topi = decoder_output.topk(1)
                 # decoder_input = topi.squeeze(-1).detach()  # detach from history as input
-                decoder_input = torch.FloatTensor(decoder_output).detach()
+                # decoder_input = torch.FloatTensor(decoder_output)
+                decoder_input = decoder_input.detach()
         if target_tensor is not None:
             decoder_outputs = torch.cat(decoder_outputs, dim=1)
         else:
@@ -112,6 +114,8 @@ def train_epoch(dataloader, encoder, decoder, encoder_optimizer,
     total_loss = 0
     for data in dataloader:
         input_tensor, target_tensor = data
+        input_tensor = input_tensor.to(device)
+        target_tensor = target_tensor.to(device)
 
         encoder_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
@@ -151,7 +155,7 @@ def timeSince(since, percent):
 
 
 def train(train_dataloader, encoder, decoder, n_epochs, lr=0.001,
-          print_every=100, plot_every=100, encoder_optimizer=None, decoder_optimizer=None, loss_function=None):
+          print_every=100, plot_every=100, encoder_optimizer=None, decoder_optimizer=None, loss_function=None, encoder_lr_scheduler=None, decoder_lr_scheduler=None):
     if loss_function is None:
         loss_function = nn.MSELoss()
     assert encoder_optimizer is not None and decoder_optimizer is not None
@@ -162,6 +166,10 @@ def train(train_dataloader, encoder, decoder, n_epochs, lr=0.001,
     plot_loss_total = 0  # Reset every plot_every
 
     for epoch in range(1, n_epochs + 1):
+        before_lr = encoder_optimizer.param_groups[0]["lr"]
+        encoder_lr_scheduler.step()
+        decoder_lr_scheduler.step()
+        after_lr = encoder_optimizer.param_groups[0]["lr"]
         loss = train_epoch(train_dataloader, encoder, decoder, encoder_optimizer, decoder_optimizer, loss_function)
         print_loss_total += loss
         plot_loss_total += loss
@@ -169,7 +177,7 @@ def train(train_dataloader, encoder, decoder, n_epochs, lr=0.001,
         if epoch % print_every == 0:
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
-            print('%s (%d %d%%) %.4f' % (timeSince(start, epoch / n_epochs),
+            print('%s (%d %d%%) %.6f' % (timeSince(start, epoch / n_epochs),
                                          epoch, epoch / n_epochs * 100, print_loss_avg))
 
         if epoch % plot_every == 0:
@@ -188,7 +196,7 @@ def showPlot(points):
     ax.yaxis.set_major_locator(loc)
     plt.plot(points)
     plt.savefig("enc_adv_graph.png")
-    plt.show()
+    # plt.show()
     print('rnn.py finished and saved .png file.')
 
 
@@ -207,7 +215,7 @@ def to_sequence(data, max_length):
     return clear_data
 
 
-def train_model(data, max_length=50, hidden_size=128, batch_size=32, n_epochs=30, print_every=5, plot_every=5, lr=0.001, loss_function=None):
+def train_model(data, max_length=50, hidden_size=128, batch_size=32, n_epochs=30, print_every=5, plot_every=5, lr=0.001, loss_function=None, weight_decay=0, start_factor=1.0, end_factor=0.5):
     # this top part is not tested.
     # what about .csv files?
     if isinstance(data, str):
@@ -239,24 +247,28 @@ def train_model(data, max_length=50, hidden_size=128, batch_size=32, n_epochs=30
     encoder = EncoderRNN(element_length, hidden_size).to(device)
     decoder = DecoderRNN(hidden_size, element_length, max_length).to(device)
 
-    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr)
-    decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr)
+    encoder_optimizer = optim.Adam(encoder.parameters(), lr=lr, weight_decay=weight_decay)
+    decoder_optimizer = optim.Adam(decoder.parameters(), lr=lr, weight_decay=weight_decay)
+
+    encoder_lr_scheduler = lr_scheduler.LinearLR(encoder_optimizer, start_factor=start_factor, end_factor=end_factor, total_iters=n_epochs)
+    decoder_lr_scheduler = lr_scheduler.LinearLR(decoder_optimizer, start_factor=start_factor, end_factor=end_factor, total_iters=n_epochs)
 
     train(dataloader, encoder, decoder, n_epochs=n_epochs, print_every=print_every, plot_every=plot_every, lr=lr,
-          encoder_optimizer=encoder_optimizer, decoder_optimizer=decoder_optimizer, loss_function=loss_function)
+          encoder_optimizer=encoder_optimizer, decoder_optimizer=decoder_optimizer, loss_function=loss_function,
+          encoder_lr_scheduler=encoder_lr_scheduler, decoder_lr_scheduler=decoder_lr_scheduler)
 
     return encoder, decoder
 
 
 def check(data, encoder, decoder, sequence, l):
     # import sklearn as sklearn
-    out, hid = encoder(torch.FloatTensor(sequence))
+    out, hid = encoder(torch.FloatTensor(sequence).to(device))
     result, _, _ = decoder(out, hid)
-    real_l = l(result, torch.FloatTensor(sequence)).item()
+    real_l = l(result, torch.FloatTensor(sequence).to(device)).item()
     while sequence in data:
         data.remove(sequence)
     for i in data:
-        if l(result, torch.FloatTensor(i)).item() < real_l:
+        if l(result, torch.FloatTensor(i).to(device)).item() < real_l:
             return False
     return True
 
@@ -286,7 +298,7 @@ def acc(**train_parameters):
         data = train_parameters['data']
         val_data = train_parameters['val_data']
 
-    possible_train_parameters = ['hidden_size', 'max_length', 'batch_size', 'n_epochs', 'print_every', 'plot_every', 'lr', 'loss_function']
+    possible_train_parameters = ['hidden_size', 'max_length', 'batch_size', 'n_epochs', 'print_every', 'plot_every', 'lr', 'loss_function', "weight_decay", "start_factor", "end_factor"]
     train_parameters.pop('data')
     if 'val_data' in train_parameters.keys():
         train_parameters.pop('val_data')

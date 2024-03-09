@@ -7,6 +7,7 @@ import inspect
 import json
 import torch
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Adventure:
     def __init__(self, filename=None):  # name of adventure? I think names are more confusing than they help.
@@ -86,7 +87,7 @@ class Adventure:
         for unit_type, real_encoding_list in zip(self.all_units.keys(), real_encodings.values()):
             # for each unittype: feed all real encodings into Bernd AI.
             encoder = torch.load(f'bernd_encoder_{unit_type}.pt')
-            _, unit_type_encoding = encoder(torch.tensor(real_encoding_list))
+            _, unit_type_encoding = encoder(torch.tensor(real_encoding_list).to(device))
             # _ are all outputs, unit_type_encoding is the hidden_state (= last output)
             unit_type_encodings.append(torch.flatten(unit_type_encoding))
         # concat unit_type_encodings to one tensor.

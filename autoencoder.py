@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 import math
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class AutoEncoder(torch.nn.Module):
     def __init__(self, input_size, encoding_size=1024):
@@ -25,7 +26,7 @@ class AutoEncoder(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(input_size - 4 * stepsize, encoding_size)
             # maybe add a Sigmoid layer here to normalize encodings?
-        )
+        ).to(device)
 
         # reverses encoding process.
         self.decoder = torch.nn.Sequential(
@@ -38,7 +39,7 @@ class AutoEncoder(torch.nn.Module):
             torch.nn.Linear(input_size - 2 * stepsize, input_size - 1 * stepsize),
             torch.nn.ReLU(),
             torch.nn.Linear(input_size - 1 * stepsize, input_size)
-        )
+        ).to(device)
 
     def forward(self, x):
         # encode-decode-return
@@ -50,7 +51,7 @@ class AutoEncoder(torch.nn.Module):
 
 def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.0001, weight_decay=1e-8):
     input_size = len(data[0])
-    data = torch.Tensor(data)
+    data = torch.Tensor(data).to(device)
 
     # Model Initialization
     model = AutoEncoder(input_size, encoding_size)
@@ -69,6 +70,7 @@ def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.00
         for element in data:
 
             # Output of Autoencoder
+            element = element.to(device)
             reconstructed = model(element)
 
             # Calculating the loss function
@@ -104,12 +106,13 @@ def train_model(data, encoding_size=1024, epochs=20, loss_function=None, lr=0.00
 
 def check(data, encoder, decoder, sample, l):
     # import sklearn as sklearn
-    out = encoder(torch.Tensor(sample))
+    out = encoder(torch.Tensor(sample).to(device))
     result = decoder(out)
-    real_l = l(result, torch.Tensor(sample)).item()
+    real_l = l(result, torch.Tensor(sample).to(device)).item()
 
     for i in data:
-        if l(result, torch.FloatTensor(i)).item() < real_l:
+        if l(result, i).item() < real_l:
+        # if l(result, torch.FloatTensor(i).to(device)).item() < real_l:
             return False
     return True
 
