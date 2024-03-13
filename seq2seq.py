@@ -1,3 +1,4 @@
+# This file is completely unnecessary. It is just a demonstration on how RNNs work.
 # https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html#the-seq2seq-model
 from __future__ import unicode_literals, print_function, division
 from io import open
@@ -340,4 +341,3 @@ if __name__ == '__main__':
     decoder = DecoderRNN(hidden_size, output_lang.n_words).to(device)
 
     train(train_dataloader, encoder, decoder, n_epochs=30, print_every=5, plot_every=5)  # learning_rate
-

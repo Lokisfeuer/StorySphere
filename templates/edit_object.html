@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Object</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        console.log("Testing console.")
+        $(document).ready(function(){
+            checkform();
+            $("p").click(function(){
+                console.log('Hid some text.')
+                $(this).hide();
+            });
+            $('.js-example-basic-single').select2();
+            $('.js-single-choice').select2({
+                placeholder: "Enter a name.",
+                tags: true,
+                width: '100%'
+            });
+            $('.js-single-choice-with-clear').select2({
+                placeholder: "Enter a name.",
+                tags: true,
+                width: '100%',
+                allowClear: true
+            });
+            $('.js-multi-choice-with-clear').select2({
+                placeholder: "Enter a name.",
+                tags: true,
+                width: '100%',
+                allowClear: true
+            });
+        });
+
+        function checkform() {
+            console.log('Checking form now.')
+            if(document.form.name.value == "") {
+                console.log('disabling button now')
+                document.getElementById("submitbutton").disabled = true;
+                return false;
+            } else {
+                console.log('enabling button now')
+                document.getElementById("submitbutton").disabled = false;
+                return false;
+                // document.form.submit();
+            }
+        }
+
+
+    </script>
+</head>
+<body>
+    <!--
+    <select class="js-example-basic-single" name="state" onchange="checkform();">
+        <option value="AL">Alabama</option>
+        <option value="WY">Wyoming</option>
+    </select>
+    <input type=submit id="submitbutton2" name="save" value="save" disabled>
+    -->
+    <p>If you click on me, I will disappear.</p>
+    <p>Click me away!</p>
+    <p>Click me too!</p>
+
+    <!-- man koennte auch hier das eigene Script einbauen. -->
+    {{ object_text }}
+</body>
+</html>
