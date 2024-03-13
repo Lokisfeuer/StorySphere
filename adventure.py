@@ -1,7 +1,7 @@
 # this file contains the adventure class and the classes for the object types.
 # Therefore, this file defines the general structure of an adventure
 
-import this
+# import this
 from collections import namedtuple
 import inspect
 import json
@@ -19,6 +19,9 @@ class Adventure:
     def __getitem__(self, unit_id):
         return self.all_units[unit_id.unit_type][unit_id.nr]
 
+    def __setitem__(self, unit_id_to_be_set, unit):
+        self.all_units[unit_id_to_be_set.unit_type][unit_id_to_be_set.nr] = unit
+
     def __len__(self):
         n = 0
         for i in self.all_units.values():
@@ -27,6 +30,7 @@ class Adventure:
         return n
 
     # add magic methods?
+    # TODO: add __iter__ and __next__ methods to replace all_units(adventure) from write_advs.py
 
     def add_unit(self, unit) -> namedtuple:
         if type(unit).__name__ not in self.all_units.keys():
@@ -52,10 +56,15 @@ class Adventure:
             all_units.update({unit_type: []})
             for feature_values in adventure[unit_type]:
                 unit_class = globals()[unit_type]  # get specific unit class
-                unit = unit_class(feature_values)  # create unit object
+                unit = unit_class(**feature_values)  # create unit object
                 all_units[unit_type].append(unit)  # write all_units to how it should be
         # self.all_units = all_units  # I think this line is not nice, but I am unsure. Redundant with __init__
         return all_units
+
+    def all_units(self):
+        for i in self.all_units.values():
+            for j in i:
+                yield j
 
     def to_dict(self):
         # return the adventure as a json object without saving it.
@@ -110,12 +119,51 @@ class Adventure:
     def to_preperation_notes(self):
         raise NotImplementedError('Adventure to preperation notes doesn\'t really work yet.')
 
+    def to_html(self, id_to_name=None):
+        if id_to_name is None:
+            id_to_name = {}
+        full_text = ''
+        for unit_type, unit_list in self.to_dict().items():
+            full_text += f'<details>'
+            full_text += f'<summary>All {unit_type}, {len(unit_list)}</summary><p>'
+            n = 0
+            for unit_dict in unit_list:
+                if UnitId(unit_type, n) in id_to_name.keys():
+                    name = id_to_name[UnitId(unit_type, n)]
+                else:
+                    name = ''
+                full_text += f'<details>'
+                full_text += f'<summary>{name} Unit {unit_type} Nr. {unit_list.index(unit_dict)}</summary><p>'
+                for feature_name, feature_value in unit_dict.items():
+                    if isinstance(feature_value, UnitId):
+                        if feature_value in id_to_name.keys():
+                            value = id_to_name[feature_value]
+                        else:
+                            value = feature_value
+                    elif isinstance(feature_value, list):
+                        value = []
+                        for i in feature_value:
+                            assert isinstance(i, UnitId)
+                            if i in id_to_name.keys():
+                                value.append(id_to_name[i])
+                            else:
+                                value.append(i)
+                    else:
+                        value = feature_value
+                    full_text += f'{feature_name}: {value}<br>'
+                full_text += f'<input type=submit value="edit" onclick=\'edit("{unit_type}", "{unit_list.index(unit_dict)}");\'>'
+                full_text += '</p></details>'
+                n += 1
+            full_text += '</p></details>'
+        return full_text
+        raise NotImplementedError('Adventure to html doesn\'t really work yet')
+
 
 class Unit:
     features = {}
 
     def __init__(self, **feature_values):
-        self.check_datatypes(feature_values)
+        feature_values = self.check_datatypes(feature_values)
         self.feature_values = feature_values
         self.pre_encoding = None
         self.real_encoding = None
@@ -132,6 +180,9 @@ class Unit:
         # return a dictionary version of the object.
         return self.feature_values  # I am unsure if this is perfect.
 
+    def to_html(self, interactive=False):
+        raise NotImplementedError
+
     # no load function needed
 
     def check_datatypes(self, feature_values):
@@ -146,15 +197,28 @@ class Unit:
                 if not isinstance(val, list):
                     raise ValueError(f'Feature "{feature}" should be of type "list". Got {type(val)} instead.')
 
+                n = 0
                 for i in val:
+                    if self.features[feature][1] == UnitId and isinstance(i, list):
+                        assert hasattr(i, '__iter__')
+                        assert len(i) == 2
+                        i = UnitId(i[0], i[1])
+                        feature_values[feature][n] = UnitId(i[0], i[1])
                     if not isinstance(i, self.features[feature][1]):
                         raise ValueError(f'Elements of feature "{feature}" (which is a list) should '
                                          f'be of type "{self.features[feature][1]}". Got {type(val[0])} instead.')
+                    n += 1
+
 
             elif not isinstance(val, self.features[feature]):
-                raise ValueError(f'Feature "{feature}" should be of type "{self.features[feature]}".'
-                                 f'Got {type(val)} instead.')
-        return
+                if self.features[feature] == UnitId:
+                    assert hasattr(val, '__iter__')
+                    assert len(val) == 2
+                    feature_values[feature] = UnitId(val[0], val[1])
+                else:
+                    raise ValueError(f'Feature "{feature}" should be of type "{self.features[feature]}".'
+                                     f'Got {type(val)} instead.')
+        return feature_values
 
     # overwrite the following functions
     def pre_encode(self):
@@ -176,7 +240,8 @@ UnitId = namedtuple('UnitId', 'unit_type nr')
 
 
 class NotPlayerCharacter(Unit):
-    features = {'npc_nr1': float, 'npc_nr2': float, 'npc_nr3': float, 'npc_id1': UnitId}
+    # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
+    features = {'npc_nr1': float, 'npc_nr2': float, 'npc_nr3': float, 'npc_bool1': bool, 'npc_str1': str, 'npc_id1': UnitId, 'npc_idlist1': (list, UnitId)}  #
 
     def pre_encode(self):
         self.pre_encoding = [self.feature_values[i] for i in list(self.features.keys())[:3]]
