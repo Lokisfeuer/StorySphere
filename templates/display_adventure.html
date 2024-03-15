@@ -7,15 +7,15 @@
 
         function edit(type, nr) {
             // getting by id doesn't work because later on there will be multiple buttons.
-            document.getElementById("submitbutton").value = "new " + type + nr;
-            console.log(document.getElementById("submitbutton").value);
+            document.getElementById("submitbutton " + type).value = "new " + type + nr;
+            console.log(document.getElementById("submitbutton " + type).value);
             console.log('edit object.');
             console.log(type);
             console.log(nr);
             setTimeout(function(){
                 // form being submitted this way is empty. why?
                 // document.getElementById("form").submit();
-                document.getElementById("submitbutton").click()
+                document.getElementById("submitbutton " + type).click()
             }, 1000);
         }
     </script>
@@ -23,8 +23,9 @@
 <body>
     {{ adventure }}
     <br>
+
     <form method="POST" id="form" action="/write_object">
-        <input type=submit id=submitbutton name="new object" value="new NotPlayerCharacter">
+        {{ new_buttons}}
     </form>
 </body>
 </html>

@@ -6,11 +6,12 @@
 # TODO: add possibility to edit objects. //
 # TODO: test properly
 from flask import *
-from adventure import Adventure, NotPlayerCharacter, all_unit_types, UnitId
+from adventure import Adventure, NotPlayerCharacter, Place, all_unit_types, UnitId
 import os
 import random
 import string
 from markupsafe import Markup
+import chatgpt as chatgpt
 from write_advs import all_units
 
 app = Flask(__name__)
@@ -74,6 +75,8 @@ def mindmap():
 
 @app.route('/write_object', methods=['POST'])
 def write_object():
+    if 'username' not in session:
+        return redirect(url_for('login'))
     assert 'new object' in request.form.keys()
     # This means the user pressed on "new object" or on "edit".
     # This function need to return the formular to write an object of the type.
@@ -221,11 +224,17 @@ def index():
         return redirect(url_for('login'))
     adventure = load_or_save_adventure()  # load adventure
     id_to_name = {val: key for key, val in session['name_to_id'].items()}
+    print(adventure.to_listing(id_to_name) + 'pingpong')
     in_html = adventure.to_html(id_to_name)
     # in_html = json.dumps(adventure.to_dict(), indent=4)
     # in_html = f'This is a placeholder for the actual adventure which has a length of {len(adventure)}.'
     in_html = Markup(f'{in_html}')
-    return render_template('display_adventure.html', adventure=in_html)
+    new_buttons = ''
+    for unit_class in all_unit_types:
+        new_buttons += f'<input type=submit id="submitbutton {unit_class.__name__}" name="new object" value="new {unit_class.__name__}">'
+    new_buttons = Markup(f'{new_buttons}')
+    # new_buttons = '<input type=submit id=submitbutton name="new object" value="new NotPlayerCharacter">'
+    return render_template('display_adventure.html', adventure=in_html, new_buttons=new_buttons)
 
 
 def get_unit_nr(unit_type):
@@ -242,8 +251,16 @@ def get_unit_nr(unit_type):
 
 
 def call_ai(adventure, unit_type):
-    # TODO add AI call here. AI should return something like the following object.
-    return NotPlayerCharacter(npc_nr1=0.1, npc_nr2=0.2, npc_nr3=0.3, npc_bool1=True)
+    for unit_class in all_unit_types:
+        if unit_class.__name__ == unit_type:
+            return unit_class()
+    if unit_type == 'NotPlayerCharacter':
+        # TODO add AI call here. AI should return something like the following object.
+        return NotPlayerCharacter(mainname='Alexandra')
+    elif unit_type == 'Place':
+        return Place(mainname='The Cliff')
+    else:
+        raise ValueError(f'Unknown unit type {unit_type}')
 
 
 def get_unit(unit_type, unit_nr):
@@ -293,10 +310,11 @@ def write_pre_filled_form(unit):
         elif feature_type == bool:
             if value is None:
                 value = False
+            assert isinstance(value, bool)
             if value:
-                unit_text += f'{feature}: <input type=checkbox name="{feature}" value="True"><br>'
-            else:
                 unit_text += f'{feature}: <input type=checkbox name="{feature}" value="True" checked><br>'
+            else:
+                unit_text += f'{feature}: <input type=checkbox name="{feature}" value="True"><br>'
         elif isinstance(feature_type, tuple) or feature_type == UnitId:
             id_to_name = {val: key for key, val in session['name_to_id'].items()}
             if value in id_to_name.keys():

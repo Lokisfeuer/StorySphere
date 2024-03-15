@@ -6,8 +6,13 @@ from collections import namedtuple
 import inspect
 import json
 import torch
+from roberta import roberta
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+PRE_ENC_LENGTH = 1050
+PRE_RNN_HIDDEN = 2000
+
 
 class Adventure:
     def __init__(self, filename=None):  # name of adventure? I think names are more confusing than they help.
@@ -20,6 +25,12 @@ class Adventure:
         return self.all_units[unit_id.unit_type][unit_id.nr]
 
     def __setitem__(self, unit_id_to_be_set, unit):
+        if not isinstance(unit_id_to_be_set, UnitId):
+            if hasattr(unit_id_to_be_set, '__iter__'):
+                assert len(unit_id_to_be_set) == 2
+                unit_id_to_be_set = UnitId(unit_id_to_be_set[0], unit_id_to_be_set[1])
+            else:
+                raise ValueError
         self.all_units[unit_id_to_be_set.unit_type][unit_id_to_be_set.nr] = unit
 
     def __len__(self):
@@ -119,6 +130,24 @@ class Adventure:
     def to_preperation_notes(self):
         raise NotImplementedError('Adventure to preperation notes doesn\'t really work yet.')
 
+    def to_html(self, id_to_name):
+        full_text = ''
+        for unit_type, unit_list in self.all_units.items():
+            full_text += f'<details>'
+            full_text += f'<summary>All {unit_type}, {len(unit_list)}</summary><p>'
+            n = 0
+            for unit in unit_list:
+                full_text += f'<details>'
+                name = id_to_name[UnitId(unit_type, n)]
+                full_text += f'<summary>{name} Unit {unit_type} Nr. {n}</summary><p>'
+                full_text += unit.to_text(id_to_name).replace('\n', '<br>')
+                full_text += f'<input type=submit value="edit" onclick=\'edit("{unit_type}", "{n}");\'>'
+                full_text += '</p></details>'
+                n += 1
+            full_text += '</p></details>'
+        return full_text
+
+    '''
     def to_html(self, id_to_name=None):
         if id_to_name is None:
             id_to_name = {}
@@ -134,6 +163,7 @@ class Adventure:
                     name = ''
                 full_text += f'<details>'
                 full_text += f'<summary>{name} Unit {unit_type} Nr. {unit_list.index(unit_dict)}</summary><p>'
+                # TODO: use this instead: full_text += unit.to_text(id_to_name)
                 for feature_name, feature_value in unit_dict.items():
                     if isinstance(feature_value, UnitId):
                         if feature_value in id_to_name.keys():
@@ -157,6 +187,20 @@ class Adventure:
             full_text += '</p></details>'
         return full_text
         raise NotImplementedError('Adventure to html doesn\'t really work yet')
+    '''
+
+    def to_listing(self, id_to_name):
+        full_text = ''
+        for unit_type, unit_list in self.all_units.items():
+            full_text += f'All elements of type {unit_type}.\n'
+            n = 0
+            for unit in unit_list:
+                name = id_to_name[UnitId(unit_type, n)]
+                full_text += f'\tNr. {n + 1}: {name}\n'
+                full_text += '\t\t' + '\n\t\t'.join(unit.to_text(id_to_name).splitlines())
+                full_text += f'\n'
+                n += 1
+        return full_text
 
 
 class Unit:
@@ -180,8 +224,26 @@ class Unit:
         # return a dictionary version of the object.
         return self.feature_values  # I am unsure if this is perfect.
 
-    def to_html(self, interactive=False):
-        raise NotImplementedError
+    def to_text(self, id_to_name):
+        text = ''
+        for feature_name, feature_value in self.feature_values.items():
+            if isinstance(feature_value, UnitId):
+                if feature_value in id_to_name.keys():
+                    value = id_to_name[feature_value]
+                else:
+                    value = feature_value
+            elif isinstance(feature_value, list):
+                value = []
+                for i in feature_value:
+                    assert isinstance(i, UnitId)
+                    if i in id_to_name.keys():
+                        value.append(id_to_name[i])
+                    else:
+                        value.append(i)
+            else:
+                value = feature_value
+            text += f'{feature_name}: {value}\n'
+        return text
 
     # no load function needed
 
@@ -206,9 +268,8 @@ class Unit:
                         feature_values[feature][n] = UnitId(i[0], i[1])
                     if not isinstance(i, self.features[feature][1]):
                         raise ValueError(f'Elements of feature "{feature}" (which is a list) should '
-                                         f'be of type "{self.features[feature][1]}". Got {type(val[0])} instead.')
+                                         f'be of type "{self.features[feature][1]}". Got {type(i)} instead.')
                     n += 1
-
 
             elif not isinstance(val, self.features[feature]):
                 if self.features[feature] == UnitId:
@@ -220,18 +281,78 @@ class Unit:
                                      f'Got {type(val)} instead.')
         return feature_values
 
-    # overwrite the following functions
     def pre_encode(self):
+        self.pre_encoding = []
+
+        # get onehot of unit_type
+        index = all_unit_types.index(self.__class__)
+        for i in range(len(all_unit_types)):
+            if i == index:
+                self.pre_encoding.append(1.)
+            else:
+                self.pre_encoding.append(0.)
+
         # generate the pre-encoding for this object
-        self.pre_encoding = None
-        raise NotImplementedError()
+        self.pre_encoding = [0. if i != index else 1. for i in range(len(all_unit_types))]
+        for feature, feature_type in self.features.items():
+            if feature in self.feature_values:
+                value = self.feature_values[feature]
+            else:
+                value = None
+            if feature_type == bool or feature_type == float:
+                if value is not None:
+                    self.pre_encoding.append(1.)
+                    self.pre_encoding.append(float(value))
+                else:
+                    self.pre_encoding.append(0.)
+                    self.pre_encoding.append(0.)
+            elif feature_type == str:
+                if value is not None:
+                    self.pre_encoding.append(1.)
+                    self.pre_encoding.extend(roberta(value))
+                else:
+                    self.pre_encoding.append(0.)
+                    self.pre_encoding.extend([0 for _ in range(1024)])  # here needs to be roberta encoding length
+            elif feature_type == UnitId:
+                pass
+            elif feature_type == (list, UnitId):
+                pass
+            else:
+                raise ValueError
+        assert len(self.pre_encoding) <= PRE_ENC_LENGTH
+        while len(self.pre_encoding) < PRE_ENC_LENGTH:
+            self.pre_encoding.append(0.)
 
     def real_encode(self, adventure):
         # generate the real encoding for this object.
         # get pre encodings through the adventure.
         # use AI (either Transformer or RNN) to interpret list of pres.
-        self.real_encoding = None
-        raise NotImplementedError()
+        self.real_encoding = self.pre_encoding
+        for feature, feature_type in self.features.items():
+            if feature in self.feature_values:
+                value = self.feature_values[feature]
+            else:
+                value = None
+            if feature_type == UnitId:
+                if value is None:
+                    self.real_encoding.append(0.)
+                    self.real_encoding.extend(0. for _ in range(PRE_ENC_LENGTH))
+                else:
+                    self.real_encoding.append(1.)
+                    self.real_encoding.extend(adventure[value].pre_encoding)
+            elif feature_type == (list, UnitId):
+                if value is None:
+                    self.real_encoding.append(0.)
+                    self.real_encoding.extend(0. for _ in range(PRE_RNN_HIDDEN))
+                else:
+                    self.real_encoding.append(1.)
+                    # TODO: Test Anna call.
+                    anna = torch.load('anna_encoder.pt')
+                    pres = []
+                    for unit_id in value:
+                        pres.append(adventure[value].pre_encoding)
+                    output, hidden = anna(torch.tensor(pres))
+                    self.real_encoding.extend(hidden.to_list())
 
 
 # advantage of this is mostly, that now type(id) does not produce integer or string but UnitId.
@@ -241,7 +362,8 @@ UnitId = namedtuple('UnitId', 'unit_type nr')
 
 class NotPlayerCharacter(Unit):
     # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
-    features = {'npc_nr1': float, 'npc_nr2': float, 'npc_nr3': float, 'npc_bool1': bool, 'npc_str1': str, 'npc_id1': UnitId, 'npc_idlist1': (list, UnitId)}  #
+    features = {'mainname': str, 'visual description': str, 'character description': str, 'hostile': bool,
+                'best friend': UnitId, 'associates': (list, UnitId)}  #
 
     def pre_encode(self):
         self.pre_encoding = [self.feature_values[i] for i in list(self.features.keys())[:3]]
@@ -252,7 +374,34 @@ class NotPlayerCharacter(Unit):
         # if necessary, use Anna encoder.
 
 
-all_unit_types = [NotPlayerCharacter]
+class Place(Unit):
+    # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
+    features = {'mainname': str, 'description': str, 'places you can go from here': (list, UnitId),
+                'people to be found here': (list, UnitId)}  #
+
+    def pre_encode(self):
+        self.pre_encoding = [self.feature_values[i] for i in list(self.features.keys())[:3]]
+        pass
+
+    def real_encode(self, adventure):
+        self.real_encoding = self.pre_encoding + adventure[self.feature_values['npc_id1']].pre_encoding
+        # if necessary, use Anna encoder.
+
+
+class EventOrScene(Unit):
+    features = {
+        'who is involved?': (list, UnitId),
+        'where': UnitId,
+        'relevant items': (list, UnitId),
+        'relevant secrets': (list, UnitId),
+        'Why does it happen?': str,
+        'Which relationships change?': str,
+        'Is this a possible startscene': bool,
+        'How likely will this event happen?': float
+    }
+
+
+all_unit_types = [NotPlayerCharacter, Place, EventOrScene]
 
 
 def write_demo_adventure():
