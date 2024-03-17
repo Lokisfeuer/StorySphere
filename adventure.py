@@ -10,8 +10,9 @@ from roberta import roberta
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-PRE_ENC_LENGTH = 1050
-PRE_RNN_HIDDEN = 2000
+PRE_ENC_LENGTH = 4000
+PRE_RNN_HIDDEN = 4000
+PRE_SEQ_LENGTH = 50
 
 
 class Adventure:
@@ -261,7 +262,7 @@ class Unit:
 
                 n = 0
                 for i in val:
-                    if self.features[feature][1] == UnitId and isinstance(i, list):
+                    if self.features[feature][1] == UnitId:
                         assert hasattr(i, '__iter__')
                         assert len(i) == 2
                         i = UnitId(i[0], i[1])
@@ -350,9 +351,11 @@ class Unit:
                     anna = torch.load('anna_encoder.pt')
                     pres = []
                     for unit_id in value:
-                        pres.append(adventure[value].pre_encoding)
+                        pres.append(adventure[unit_id].pre_encoding)
+                    while pres <= PRE_SEQ_LENGTH:
+                        pres.append([0 for _ in PRE_ENC_LENGTH])
                     output, hidden = anna(torch.tensor(pres))
-                    self.real_encoding.extend(hidden.to_list())
+                    self.real_encoding.extend(torch.flatten(hidden).tolist())
 
 
 # advantage of this is mostly, that now type(id) does not produce integer or string but UnitId.
@@ -360,10 +363,11 @@ class Unit:
 UnitId = namedtuple('UnitId', 'unit_type nr')
 
 
+'''
 class NotPlayerCharacter(Unit):
     # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
     features = {'mainname': str, 'visual description': str, 'character description': str, 'hostile': bool,
-                'best friend': UnitId, 'associates': (list, UnitId)}  #
+                'best friend': UnitId, 'associates': (list, UnitId), 'useless_nr': float}  # , 'useless_nr2': float
     feature_to_prompts = {
         'mainname': 'Replace this with the full name of the not-player-character.',
         'visual description': 'Replace this with the visual description of the not-player-character.',
@@ -375,12 +379,10 @@ class NotPlayerCharacter(Unit):
     }
 
 
-
-
 class Place(Unit):
     # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
     features = {'placename': str, 'description': str, 'places you can go from here': (list, UnitId),
-                'people to be found here': (list, UnitId)}  #
+                'people to be found here': (list, UnitId), 'useless_nr': float}  # , 'useless_nr2': float
     feature_to_prompts = {
         'placename': 'Replace this with a memorable name for this place.',
         'description': 'Replace this with the description of this place.',
@@ -388,29 +390,189 @@ class Place(Unit):
         'people to be found here': 'Replace this with a python like list of people you can meet at this place.'
     }
 
-    def pre_encode(self):
-        self.pre_encoding = [self.feature_values[i] for i in list(self.features.keys())[:3]]
-        pass
-
-    def real_encode(self, adventure):
-        self.real_encoding = self.pre_encoding + adventure[self.feature_values['npc_id1']].pre_encoding
-        # if necessary, use Anna encoder.
-
+'''
 
 class EventOrScene(Unit):
     features = {
-        'who is involved?': (list, UnitId),
-        'where': UnitId,
-        'relevant items': (list, UnitId),
-        'relevant secrets': (list, UnitId),
-        'Why does it happen?': str,
-        'Which relationships change?': str,
-        'Is this a possible startscene': bool,
-        'How likely will this event happen?': float
+        'Which people are involved?': (list, UnitId),
+        'Which groups are involved?': (list, UnitId),
+        'Which beasts are involved?': (list, UnitId),
+        'Which items are involved?': (list, UnitId),
+        'Which secrets are involved?': (list, UnitId),
+        'What motivations are involved?': (list, UnitId),
+        'where might this happen?': (list, UnitId),
+        'Is this an investigation scene?': bool,
+        'Is this a social interaction?': bool,
+        'Is this a fight scene?': bool,
+        'What happens?': str,
+        'How do relationships change?': str,
+        'What triggers this scene to happen?': str,
+        'Is this scene a start scene?': bool,
+        'If this scene is a start scene, who\'s start scene is it?': (list, UnitId),
+        'How likely will this scene occur?': float,
+    }
+    feature_to_prompts = {key: '{replace_this_with_answer}' for key in features.keys()}
+
+
+class Secret(Unit):
+    features = {
+        'Whats the secret?': str,
+        'Who knows of it?': (list, UnitId),
+        'Which people are involved?': (list, UnitId),
+        'Which groups are involved?': (list, UnitId),
+        'Which items are involved?': (list, UnitId),
+        'On a scale of 0.0 to 1.0 how exciting is it to learn about this secret?': float
+    }
+    feature_to_prompts = {key: '{replace_this_with_answer}' for key in features.keys()}
+
+
+class Item(Unit):
+    features = {
+        'Who owns this?': (list, UnitId),  # technically multiple people can own something together.
+        'On a scale of 0.0 to 1.0 where 0 is just very little and 1 is very much; how much is it worth?': float,
+        'What is it?': str,
+        'Where is it?': UnitId
+    }
+    feature_to_prompts = {key: '{replace_this_with_answer}' for key in features.keys()}
+
+
+class Beast(Unit):
+    features = {
+        'Which race is this beast?': str,
+        'Where could it be?': (list, UnitId),
+        'What does it look like?': str,
+        'On a scale of 0.0 (not aggressive) to 1.0 (immediate attack), how aggressive is the beast?': float
+    }
+    feature_to_prompts = {key: '{replace_this_with_answer}' for key in features.keys()}
+
+
+class Group(Unit):
+    features = {
+        'Who is part of the group?': (list, UnitId),
+        'What makes them a group / What is the reason for solidarity?': str,
+        'Where did the group first meet?': UnitId
+    }
+    feature_to_prompts = {key: '{replace_this_with_answer}' for key in features.keys()}
+
+
+class Motivation(Unit):
+    '''
+    Posit ive Fa ctor s
+        1 ) Amb it ion
+        2 ) De termina t ion
+        3 ) Pa ssion
+        4 ) Enthusia sm
+        5 ) Cu r iosity
+        6 ) Con fidence
+        7 ) Op timism
+        8 ) Pe r seve r a nce
+        9 ) Joyful Cha llenge
+        10) Gr oth
+    Nega t ive Fa ctor s
+        1 ) Fea r
+        2 ) Fr u st r a t ion
+        3 ) Anger
+        4 ) Discon te n t
+        5 ) Disappoin tme n t
+        6 ) Dissa t isfa ct ion
+        7 ) Regr e t
+        8 ) Avoida nce
+        9 ) Re st le ssness
+        10) Despe r a t ion
+    Mixe d / Ne u tr a l Fa ctor s
+        1 ) Cu r iosity (posit ive or ne u tr a l)
+        2 ) Re st le ssness (might le a d to posit ive change)
+        3 ) Ca u tion
+        4 ) Re fle ct ion
+        5 ) Amb iva lence
+    '''
+    features = {
+        'Who is motivated?': (list, UnitId),
+        'What is the motivation for?': str,
+        'By whom is the motivation?': (list, UnitId),
+        'Is ambition the source of motivation?': bool,
+        'Is determination of the source of motivation?': bool,
+        'Is passion the source of motivation?': bool,
+        'Is enthusiasm the source of motivation?': bool,
+        'Is curiosity the source of motivation?': bool,
+        'Is confidence of the source of motivation?': bool,
+        'Is optimism the source of motivation?': bool,
+        'Is perseverance the source of motivation?': bool,
+        'Is joyful challenge the source of motivation?': bool,
+        'Is growth the source of motivation?': bool,
+        'Is fear the source of motivation?': bool,
+        'Is frustration the source of motivation?': bool,
+        'Is anger the source of motivation?': bool,
+        'Is discontent the source of motivation?': bool,
+        'Is disappointment the source of motivation?': bool,
+        'Is dissatisfaction the source of motivation?': bool,
+        'Is regret the source of motivation?': bool,
+        'Is avoidance the source of motivation?': bool,
+        'Is restlessness the source of motivation?': bool,
+        'Is desperation the source of motivation?': bool,
+        'Is caution the source of motivation?': bool,
+        'Is reflection the source of motivation?': bool
     }
 
 
-all_unit_types = [NotPlayerCharacter, Place, EventOrScene]
+class Place(Unit):
+    features = {
+        'Where is it?': str,
+        'What are the environmental conditions?': str,
+        'What other places is this place associated with?': (list, UnitId),
+        'What people are there?': (list, UnitId),
+        'What groups are there?': (list, UnitId),
+        'What beasts are there?': (list, UnitId),
+        'What items are there?': (list, UnitId),
+        'What secrets can be found here?': (list, UnitId),
+        'What size is it? On a scale of 0.0 to 1.0 where 0 is a very small cabin and 1 is a big city.': float,
+        'What does it look like?': str,
+        'Whats the special history of this place?': (list, UnitId),
+        'What will happen at or with this place?': str,
+        'Is it a space in nature?': bool,
+        'Is it an urban space?': bool,
+        'Is it a desert?': bool,
+        'Is it a forest?': bool,
+        'Is it a mountain range?': bool,
+        'Is it a body of water?': bool,
+        'Is it a coastline?': bool,
+        'Is it an island?': bool,
+        'Is it a grassland?': bool,
+        'Is it a park?': bool,
+        'Is it a cave?': bool
+    }
+
+
+class TransportaionInfrastructure(Unit):
+    features = {
+        'Which places does it connect?': (list, UnitId),
+        'How frequent does this route get taken? On a scale of 0.0 (barely ever) to 1.0 (constantly).': float,
+        'Is this transportation infrastructure for motor vehicles?': bool,
+        'Is this transportation infrastructure for non-motor vehicles?': bool,
+        'Is this transportation infrastructure for pedestrians?': bool,
+        'Is it a street?': bool,
+        'Is it a railway?': bool,
+        'Is it a flying route?': bool,
+        'Is it a boat route?': bool,
+        'Is it a tunnel?': bool,
+        'Is it a bridge?': bool
+    }
+
+
+class Character(Unit):
+    features = {
+        'Is this a player character?': bool,
+        'What is this Character skilled or talented at?': str,
+        'Which Events or Scenes involve this Character?': (list, UnitId),
+        'Which groups is this Character a part of?': (list, UnitId),
+        'What are plans of or with this Character?': (list, UnitId),
+        'What\'s this Characters backstory?': str,
+        'Who is important for this Character?': (list, UnitId),
+        'What is important for this Character?': (list, UnitId),
+    }
+
+
+all_unit_types = [Character, Place, EventOrScene, TransportaionInfrastructure, Motivation, Group, Beast, Item, Secret]
 
 
 def write_demo_adventure():
