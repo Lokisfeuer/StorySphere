@@ -6,13 +6,12 @@
 # TODO: add possibility to edit objects. //
 # TODO: test properly
 from flask import *
-from adventure import Adventure, NotPlayerCharacter, Place, all_unit_types, UnitId
+from adventure import Adventure, all_unit_types, UnitId
 import os
 import random
 import string
 from markupsafe import Markup
-import chatgpt as chatgpt
-from write_advs import all_units
+from openai_call import ask_gpt
 
 app = Flask(__name__)
 
@@ -251,16 +250,13 @@ def get_unit_nr(unit_type):
 
 
 def call_ai(adventure, unit_type):
-    for unit_class in all_unit_types:
-        if unit_class.__name__ == unit_type:
-            return unit_class()
-    if unit_type == 'NotPlayerCharacter':
-        # TODO add AI call here. AI should return something like the following object.
-        return NotPlayerCharacter(mainname='Alexandra')
-    elif unit_type == 'Place':
-        return Place(mainname='The Cliff')
-    else:
-        raise ValueError(f'Unknown unit type {unit_type}')
+    global object_n
+    if object_n > 0:
+        object_n = object_n - 1
+        for unit_class in all_unit_types:
+            if unit_class.__name__ == unit_type:
+                return unit_class()
+    return ask_gpt(adventure, unit_type, session['name_to_id'])
 
 
 def get_unit(unit_type, unit_nr):
@@ -306,7 +302,7 @@ def write_pre_filled_form(unit):
         elif feature_type == str:
             if value is None:
                 value = ''
-            unit_text += f'{feature}: <input type=text name="{feature}" value="{value}"><br>'
+            unit_text += f'{feature}: <input type=text name="{feature}" value="{value}" size="100"><br>'
         elif feature_type == bool:
             if value is None:
                 value = False
@@ -315,7 +311,7 @@ def write_pre_filled_form(unit):
                 unit_text += f'{feature}: <input type=checkbox name="{feature}" value="True" checked><br>'
             else:
                 unit_text += f'{feature}: <input type=checkbox name="{feature}" value="True"><br>'
-        elif isinstance(feature_type, tuple) or feature_type == UnitId:
+        elif feature_type == UnitId:
             id_to_name = {val: key for key, val in session['name_to_id'].items()}
             if value in id_to_name.keys():
                 value = id_to_name[value]
@@ -326,16 +322,31 @@ def write_pre_filled_form(unit):
                     option_text += f'<option selected="selected">{i}</option>'
                 else:
                     option_text += f'<option>{i}</option>'
-            if isinstance(feature_type, tuple):
-                unit_text += f'{feature}: <select name="{feature}" class="js-multi-choice-with-clear" multiple="multiple">' \
-                             f'{option_text}</select><br>'
-            else:
-                unit_text += f'{feature}: <select name="{feature}" class="js-single-choice-with-clear">' \
-                             f'{option_text}</select><br>'
+            unit_text += f'{feature}: <select name="{feature}" class="js-single-choice-with-clear">' \
+                         f'{option_text}</select><br>'
+        elif feature_type == (list, UnitId):
+            id_to_name = {val: key for key, val in session['name_to_id'].items()}
+            new_value = []
+            for i in value:
+                if i in id_to_name.keys():
+                    new_value.append(id_to_name[i])
+                else:
+                    raise ValueError
+                    new_value.append(i)
+            all_names = session['unset_names'] + list(session['name_to_id'].keys())
+            option_text = '<option></option>'
+            for i in all_names:
+                if i in new_value:
+                    option_text += f'<option selected="selected">{i}</option>'
+                else:
+                    option_text += f'<option>{i}</option>'
+            unit_text += f'{feature}: <select name="{feature}" class="js-multi-choice-with-clear" ' \
+                         f'multiple="multiple">{option_text}</select><br>'
         else:
             # should not happen
-            raise ValueError('??')
+            raise ValueError(f'?? Got Feature Type {feature_type}')
     return unit_text
+
 
 
 def load_or_save_adventure(adventure=None):
