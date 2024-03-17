@@ -196,7 +196,7 @@ class Adventure:
             n = 0
             for unit in unit_list:
                 name = id_to_name[UnitId(unit_type, n)]
-                full_text += f'\tNr. {n + 1}: {name}\n'
+                full_text += f'\tNr. {n + 1}; Name to reference this unit: "{name}"\n'
                 full_text += '\t\t' + '\n\t\t'.join(unit.to_text(id_to_name).splitlines())
                 full_text += f'\n'
                 n += 1
@@ -364,20 +364,29 @@ class NotPlayerCharacter(Unit):
     # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
     features = {'mainname': str, 'visual description': str, 'character description': str, 'hostile': bool,
                 'best friend': UnitId, 'associates': (list, UnitId)}  #
+    feature_to_prompts = {
+        'mainname': 'Replace this with the full name of the not-player-character.',
+        'visual description': 'Replace this with the visual description of the not-player-character.',
+        'character description': 'Replace this with the character description of the not-player-character.',
+        'hostile': 'Replace this with "True" if the not-player-character is hostile.',
+        'best friend': 'Replace this with the name of the best friend of the not-player-character which is one '
+                       'of the characters from the story.',
+        'associates': 'Enter a python like list of characters from the story who are associates with this character.'
+    }
 
-    def pre_encode(self):
-        self.pre_encoding = [self.feature_values[i] for i in list(self.features.keys())[:3]]
-        pass
 
-    def real_encode(self, adventure):
-        self.real_encoding = self.pre_encoding + adventure[self.feature_values['npc_id1']].pre_encoding
-        # if necessary, use Anna encoder.
 
 
 class Place(Unit):
     # TODO: Deal with Nones for UnitIds and empty lists for lists of UnitIds
-    features = {'mainname': str, 'description': str, 'places you can go from here': (list, UnitId),
+    features = {'placename': str, 'description': str, 'places you can go from here': (list, UnitId),
                 'people to be found here': (list, UnitId)}  #
+    feature_to_prompts = {
+        'placename': 'Replace this with a memorable name for this place.',
+        'description': 'Replace this with the description of this place.',
+        'places you can go from here': 'Replace this with a python like list of places you can go to from this place.',
+        'people to be found here': 'Replace this with a python like list of people you can meet at this place.'
+    }
 
     def pre_encode(self):
         self.pre_encoding = [self.feature_values[i] for i in list(self.features.keys())[:3]]
