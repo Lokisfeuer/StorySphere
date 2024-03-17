@@ -250,7 +250,7 @@ def get_unit_nr(unit_type):
 
 
 def call_ai(adventure, unit_type):
-    global object_n
+    object_n = 0
     if object_n > 0:
         object_n = object_n - 1
         for unit_class in all_unit_types:
@@ -327,6 +327,8 @@ def write_pre_filled_form(unit):
         elif feature_type == (list, UnitId):
             id_to_name = {val: key for key, val in session['name_to_id'].items()}
             new_value = []
+            if value is None:
+                value = []
             for i in value:
                 if i in id_to_name.keys():
                     new_value.append(id_to_name[i])

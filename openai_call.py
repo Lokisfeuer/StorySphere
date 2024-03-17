@@ -15,7 +15,9 @@ def call(adventure_text, unit_type_text):
                            "list of features without values but with instructions on what type of value needs to be "
                            "added to the feature. \nYou are designed to respond with a JSON object which contains "
                            "these features as keys and values for these features as values. With that a new unit can "
-                           "then be created. Take care to always give fictional and innovative ideas."
+                           "then be created. Take care to always give fictional and innovative ideas Ideally reuse "
+                           "some units from the adventure. Only adjust the "
+                           "part between the brackets {} (and remove the brackets)."
             },
             {
                 "role": "user",
@@ -31,8 +33,8 @@ def call(adventure_text, unit_type_text):
                 "content": unit_type_text
             }
         ],
-        temperature=1.35,
-        max_tokens=256,
+        temperature=1.,
+        max_tokens=1024,
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0
@@ -43,15 +45,20 @@ def call(adventure_text, unit_type_text):
 def interpret_dict(feature_string_values, unit_class, name_to_id):
     feature_values = {}
     for feature, feature_type in unit_class().features.items():
+        if feature not in feature_string_values:
+            raise ValueError(f'{feature} was not given by ai.')
         if feature in feature_string_values:
             string_value = feature_string_values[feature]
             if feature_type == str:
                 value = string_value
             elif feature_type == float:
-                if string_value == '':
-                    value = 0.0
+                if isinstance(string_value, float):
+                    value = string_value
                 else:
-                    value = float(string_value)
+                    if string_value.isnumeric():
+                        value = float(string_value)
+                    else:
+                        value = 0.0
             elif feature_type == bool:
                 value = 'True' == string_value
             elif feature_type == UnitId:
@@ -63,7 +70,7 @@ def interpret_dict(feature_string_values, unit_class, name_to_id):
             elif isinstance(feature_type, tuple):
                 value = []
                 assert feature_type[1] == UnitId
-                for val_name in string_value:
+                for val_name in string_value.split(', '):
                     if val_name in name_to_id.keys():
                         val_id = name_to_id[val_name]
                         val_id = UnitId(val_id[0], val_id[1])
@@ -80,7 +87,7 @@ def interpret_dict(feature_string_values, unit_class, name_to_id):
 
 
 def ask_gpt(old_adventure, unit_type, name_to_id):
-    id_to_name = {val: key for  key, val in name_to_id.items()}
+    id_to_name = {val: key for key, val in name_to_id.items()}
     adventure_text = old_adventure.to_listing(id_to_name)  # id_to_name
     unit_class = None
     for unit_class in all_unit_types:
@@ -88,10 +95,19 @@ def ask_gpt(old_adventure, unit_type, name_to_id):
             break
     assert unit_class is not None
     unit_type_text = f'A new unit of type {unit_type}.\n'
-    for feature, prompt in unit_class().feature_to_prompts.items():
-        unit_type_text += f'{feature}: {{{prompt}}}\n'
+    for feature, feature_type in unit_class().features.items():
+        if feature_type is bool:
+            unit_type_text += f'{feature}: {{replace this this with either "True" or "False"}}'
+        elif feature_type is float:
+            unit_type_text += f'{feature}: {{replace this with a number between 0.0 and 1.0}}'
+        elif feature_type is UnitId:
+            unit_type_text += f'{feature}: {{replace this with a unit from the adventure}}'
+        elif feature_type == (list, UnitId):
+            unit_type_text += f'{feature}: {{replace this with one or multiple referencenames of units from the ' \
+                              f'adventure. Split them with commas.}}'
+        else:
+            unit_type_text += f'{feature}: {{replace this with answer}}'
     unit_dict = call(adventure_text, unit_type_text)
     feature_values = interpret_dict(unit_dict, unit_class, name_to_id)
     unit = unit_class(**feature_values)
     return unit
-
