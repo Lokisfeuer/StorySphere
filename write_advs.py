@@ -56,10 +56,13 @@ def adventure_pre_ai():
     # like in old_encode_adventure the generate_adventure_objs() function
 
     # load and prepare twitter dataset to use for texts
-    # twitter = pd.read_csv('twitter_dataset.csv')
-    twitter = pd.read_csv("twitter_data.csv")
-    twitter = twitter["clean_text"]
-    # twitter = twitter['Text']
+    try:
+        twitter = pd.read_csv('twitter_dataset.csv')
+        twitter = twitter['Text']
+    except FileNotFoundError:
+        twitter = pd.read_csv("twitter_data.csv")
+        twitter = twitter["clean_text"]
+
     twitter = twitter.dropna(axis=0, how='all')
     twitter = twitter.reset_index(drop=True)
     twitterator = 5  # first few entries are sometimes trash. So start at entry 5.
