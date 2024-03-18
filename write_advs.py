@@ -19,26 +19,26 @@ def multi_for_loop(iterations):
                 ...
                     yield [i, j, k, ...]
     '''
-    indeces = [0 for _ in iterations]
+    indices = [0 for _ in iterations]
     if 0 in iterations:
         raise ValueError(f'Amount of iterations must for all instances be greater than zero. '
                          f'Received the following amounts of iterations per instance: {iterations}')
     if not iterations:
         return
-    yield indeces
+    yield indices
     while True:
-        indeces[-1] += 1
+        indices[-1] += 1
         x = 0
-        for i in range(len(indeces)):
-            idx = indeces[-(i + 1)]
+        for i in range(len(indices)):
+            idx = indices[-(i + 1)]
             max = iterations[-(i + 1)]
             x += 1
             if idx == max:
-                indeces[-x] = 0
-                if x == len(indeces):
+                indices[-x] = 0
+                if x == len(indices):
                     return
-                indeces[-(x + 1)] += 1
-        yield indeces
+                indices[-(x + 1)] += 1
+        yield indices
 
 
 '''
@@ -56,10 +56,10 @@ def adventure_pre_ai():
     # like in old_encode_adventure the generate_adventure_objs() function
 
     # load and prepare twitter dataset to use for texts
-    twitter = pd.read_csv('twitter_dataset.csv')
-    # twitter = pd.read_csv("twitter_data.csv")
-    # twitter = twitter["clean_text"]
-    twitter = twitter['Text']
+    # twitter = pd.read_csv('twitter_dataset.csv')
+    twitter = pd.read_csv("twitter_data.csv")
+    twitter = twitter["clean_text"]
+    # twitter = twitter['Text']
     twitter = twitter.dropna(axis=0, how='all')
     twitter = twitter.reset_index(drop=True)
     twitterator = 5  # first few entries are sometimes trash. So start at entry 5.
@@ -85,13 +85,13 @@ def adventure_pre_ai():
 
         # iterate over every possible combination of the options (like potenzmenge = power set)
         iterations = [len(i) for i in specific_options]
-        for indeces in multi_for_loop(iterations):
+        for indices in multi_for_loop(iterations):
             n = 0
             choice = {}  # the option taken for the unit about to be created.
             for feature, feature_type in features.items():
                 if feature_type in options.keys():
                     # nth feature in the options
-                    choice.update({feature: specific_options[n][indeces[n]]})
+                    choice.update({feature: specific_options[n][indices[n]]})
                     n += 1
                 elif feature_type is str:
                     # take a tweet from Twitter as text.
@@ -102,6 +102,8 @@ def adventure_pre_ai():
                     # because elements of this adventure are intentionally created for pre-encodings
                     # and lists of UnitIds are usually irrelevant then.
                 elif feature_type is UnitId:
+                    pass  # can be ignored for pre-encodings
+                elif feature_type == (list, UnitId):
                     pass  # can be ignored for pre-encodings
                 else:
                     raise ValueError('Something went unexpectedly wrong. ')
@@ -151,13 +153,6 @@ def many_small_adventures(n=10000):
         # a bit of testing that everything is all right TODO: Use assert for this part
         check_adventure(adventure)
         new_ids = []  # necessary for later tests (at the end of function)
-        if len(id_list) != len(units_for_this_adventure):
-            raise ValueError
-        should_be_nr = 0
-        for j in id_list:
-            if should_be_nr != j.nr:
-                raise ValueError
-            should_be_nr += 1
 
         # write new adventure with the same units but with values for UnitIds that reference other units from the
         # adventure.
@@ -172,22 +167,19 @@ def many_small_adventures(n=10000):
                     #  add relations between units to feature values
                     if feature_type == UnitId:
                         feature_values.update({feature: random.choice(id_list)})
-                    elif feature_type == tuple:  # the actual feature should in this case be a list of UnitIds
-                        if feature_type == UnitId:
-                            # this case should never happen because UnitIds are caught earlier.
-                            raise ValueError("??")
+                    elif feature_type == (list, UnitId):  # the actual feature should in this case be a list of UnitIds
                         feature_values.update({feature: random.sample(id_list, random.randint(3, 10))})
                     else:
                         # this means a feature was not set, and it did not expect a UnitId nor a list of UnitIds
                         raise ValueError('Something went wrong unexpectedly. Please fix.')
 
             # recreate unit with values for UnitId features and add it to adventure.
-            newid = adventure.add_unit(unit.__class__(**feature_values))
+            new_id = adventure.add_unit(unit.__class__(**feature_values))
 
             # again some checking that things are all right
-            if newid not in id_list:
+            if new_id not in id_list:
                 raise ValueError('?')
-            new_ids.append(newid)  # new_ids is also only necessary for testing.
+            new_ids.append(new_id)  # new_ids is also only necessary for testing.
 
         # and even more checking
         for unit_id in id_list:
@@ -213,11 +205,11 @@ def check_mega_adventure(mega_adventure):
     for unit in all_units(mega_adventure):
         if 'npc_nr1' in unit.feature_values.keys():
             # this case is fine
-            a = 1
+            _ = 1
             pass  # Did I mention I hate breakpoints at a pass command? They don't work.
         if 'npc_id1' in unit.feature_values.keys():
             # this case means something is wrong
-            a = 1
+            _ = 1
             raise ValueError()
 
 
@@ -238,6 +230,8 @@ def gen_real_encodings(n=100):
         # This is similar to the to_vector function of an adventure (which can't be used before all AIs including
         # Bernd are trained)
 
+        _ = 1
+        # the following loop takes a while because roberta is called quite often.
         # generate pre encodings.
         for list_of_units in adventure.all_units.values():
             for unit in list_of_units:
@@ -261,6 +255,7 @@ def all_real_encodings(n=100):
                 data.update({unit_type: []})
             data[unit_type].append([real_encoding for real_encoding in real_encodings[unit_type]])
     return data
+
 
 if __name__ == "__main__":
     df = pd.read_csv("twitter_dataset.csv")

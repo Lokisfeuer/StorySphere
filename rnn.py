@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import time
 import math
+import copy
 
 
 # plt.switch_backend('agg')  # I don't know what this does.
@@ -166,11 +167,11 @@ def train(train_dataloader, encoder, decoder, n_epochs, lr=0.001,
     plot_loss_total = 0  # Reset every plot_every
 
     for epoch in range(1, n_epochs + 1):
+        loss = train_epoch(train_dataloader, encoder, decoder, encoder_optimizer, decoder_optimizer, loss_function)
         before_lr = encoder_optimizer.param_groups[0]["lr"]
         encoder_lr_scheduler.step()
         decoder_lr_scheduler.step()
         after_lr = encoder_optimizer.param_groups[0]["lr"]
-        loss = train_epoch(train_dataloader, encoder, decoder, encoder_optimizer, decoder_optimizer, loss_function)
         print_loss_total += loss
         plot_loss_total += loss
 
@@ -261,16 +262,18 @@ def train_model(data, max_length=50, hidden_size=128, batch_size=32, n_epochs=30
 
 
 def check(data, encoder, decoder, sequence, l):
+    data = copy.deepcopy(data)
     # import sklearn as sklearn
     out, hid = encoder(torch.FloatTensor(sequence).to(device))
     result, _, _ = decoder(out, hid)
     real_l = l(result, torch.FloatTensor(sequence).to(device)).item()
     while sequence in data:
         data.remove(sequence)
+    x = 0
     for i in data:
         if l(result, torch.FloatTensor(i).to(device)).item() < real_l:
-            return False
-    return True
+            x += 1
+    return (len(data) - x) / len(data)
 
 
 def scramble_data(data, n=3, max_length=None):
@@ -308,12 +311,10 @@ def acc(**train_parameters):
     l = torch.nn.MSELoss()
     good = 0
     for sequence in data:
-        if check(data, encoder, decoder, sequence, l):
-            good += 1
+        good += check(data, encoder, decoder, sequence, l)
     val_good = 0
     for sequence in val_data:
-        if check(val_data, encoder, decoder, sequence, l):
-            val_good += 1
+        val_good += check(val_data, encoder, decoder, sequence, l)  # does this mutate val_data?
     return good / len(data), val_good / len(val_data)
     # choose or generate random sequence
     # encode-decode it

@@ -10,8 +10,8 @@ from roberta import roberta
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-PRE_ENC_LENGTH = 4000
-PRE_RNN_HIDDEN = 4000
+PRE_ENC_LENGTH = 3000
+PRE_RNN_HIDDEN = 3000
 PRE_SEQ_LENGTH = 50
 
 
@@ -416,7 +416,7 @@ class EventOrScene(Unit):
 
 class Secret(Unit):
     features = {
-        'Whats the secret?': str,
+        'What is the secret?': str,
         'Who knows of it?': (list, UnitId),
         'Which people are involved?': (list, UnitId),
         'Which groups are involved?': (list, UnitId),
@@ -527,7 +527,7 @@ class Place(Unit):
         'What secrets can be found here?': (list, UnitId),
         'What size is it? On a scale of 0.0 to 1.0 where 0 is a very small cabin and 1 is a big city.': float,
         'What does it look like?': str,
-        'Whats the special history of this place?': (list, UnitId),
+        'What is the special history of this place?': (list, UnitId),
         'What will happen at or with this place?': str,
         'Is it a space in nature?': bool,
         'Is it an urban space?': bool,
@@ -573,6 +573,7 @@ class Character(Unit):
 
 
 all_unit_types = [Character, Place, EventOrScene, TransportaionInfrastructure, Motivation, Group, Beast, Item, Secret]
+all_unit_types = [Item, Beast]  # TransportaionInfrastructure
 
 
 def write_demo_adventure():
