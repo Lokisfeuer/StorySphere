@@ -352,8 +352,8 @@ class Unit:
                     pres = []
                     for unit_id in value:
                         pres.append(adventure[unit_id].pre_encoding)
-                    while pres <= PRE_SEQ_LENGTH:
-                        pres.append([0 for _ in PRE_ENC_LENGTH])
+                    while len(pres) < PRE_SEQ_LENGTH:
+                        pres.append([0 for _ in range(PRE_ENC_LENGTH)])
                     output, hidden = anna(torch.tensor(pres))
                     self.real_encoding.extend(torch.flatten(hidden).tolist())
 
@@ -400,7 +400,7 @@ class EventOrScene(Unit):
         'Which items are involved?': (list, UnitId),
         'Which secrets are involved?': (list, UnitId),
         'What motivations are involved?': (list, UnitId),
-        'where might this happen?': (list, UnitId),
+        'Where might this happen?': (list, UnitId),
         'Is this an investigation scene?': bool,
         'Is this a social interaction?': bool,
         'Is this a fight scene?': bool,
@@ -495,7 +495,7 @@ class Motivation(Unit):
         'Is passion the source of motivation?': bool,
         'Is enthusiasm the source of motivation?': bool,
         'Is curiosity the source of motivation?': bool,
-        'Is confidence of the source of motivation?': bool,
+        'Is confidence the source of motivation?': bool,
         'Is optimism the source of motivation?': bool,
         'Is perseverance the source of motivation?': bool,
         'Is joyful challenge the source of motivation?': bool,
@@ -573,7 +573,7 @@ class Character(Unit):
 
 
 all_unit_types = [Character, Place, EventOrScene, TransportaionInfrastructure, Motivation, Group, Beast, Item, Secret]
-all_unit_types = [Item, Beast]  # TransportaionInfrastructure
+# all_unit_types = [Item, Beast, TransportaionInfrastructure]
 
 
 def write_demo_adventure():
