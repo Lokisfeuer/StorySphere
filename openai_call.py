@@ -1,6 +1,14 @@
 import json
 from openai import OpenAI
 from adventure import all_unit_types, UnitId
+from difflib import SequenceMatcher
+import warnings
+
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+
 client = OpenAI()
 
 
@@ -39,16 +47,34 @@ def call(adventure_text, unit_type_text):
         frequency_penalty=0,
         presence_penalty=0
     )
-    return json.loads(response.choices[0].message.content)  # returns dictionary
-
+    # test this.
+    try:
+        returned_dict = json.loads(response.choices[0].message.content)  # returns dictionary
+    except json.decoder.JSONDecodeError as e:
+        returned_dict = {'nokey': 'No JSON given.'}
+        warnings.warn(f'OpenAI did not return a proper JSON so no values can be prefilled.\n'
+                      f'JSON ERROR: {e}')
+    finally:
+        return returned_dict
 
 def interpret_dict(feature_string_values, unit_class, name_to_id):
     feature_values = {}
     for feature, feature_type in unit_class().features.items():
         if feature not in feature_string_values:
-            raise ValueError(f'{feature} was not given by ai.')
-        if feature in feature_string_values:
-            string_value = feature_string_values[feature]
+            # TODO: Ähnlichkeitsabfrage testen. - Works!
+            similarities = []
+            for feature_string in feature_string_values:
+                similarities.append(similar(feature, feature_string))
+            choosen_string = list(feature_string_values.keys())[similarities.index(max(similarities))]
+            if not choosen_string == 'nokey':
+                warnings.warn(f'Warning: A feature was not given by openai. Another features values was taken instead.\n'
+                              f'Feat not given: \t"{feature}"\n'
+                              f'Chosen Instead: \t"{choosen_string}"')
+            # feature = choosen_string
+        else:
+            choosen_string = feature
+        if choosen_string in feature_string_values:
+            string_value = feature_string_values[choosen_string]
             if feature_type == str:
                 value = string_value
             elif feature_type == float:
@@ -87,7 +113,7 @@ def interpret_dict(feature_string_values, unit_class, name_to_id):
 
 
 def ask_gpt(old_adventure, unit_type, name_to_id):
-    id_to_name = {val: key for key, val in name_to_id.items()}
+    id_to_name = {tuple(val): key for key, val in name_to_id.items()}
     adventure_text = old_adventure.to_listing(id_to_name)  # id_to_name
     unit_class = None
     for unit_class in all_unit_types:
@@ -111,3 +137,7 @@ def ask_gpt(old_adventure, unit_type, name_to_id):
     feature_values = interpret_dict(unit_dict, unit_class, name_to_id)
     unit = unit_class(**feature_values)
     return unit
+
+
+if __name__ == '__main__':
+    print(similar("What are plans of or with this Character?", "What is important for this Character?"))

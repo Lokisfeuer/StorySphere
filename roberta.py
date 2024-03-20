@@ -1,10 +1,10 @@
-from transformers import AutoTokenizer, AutoModel
+# from transformers import AutoTokenizer, AutoModel
 import torch
 import torch.nn.functional as F
 
 
-TOKENIZER = AutoTokenizer.from_pretrained('sentence-transformers/all-roberta-large-v1')
-MODEL = AutoModel.from_pretrained('sentence-transformers/all-roberta-large-v1')
+# TOKENIZER = AutoTokenizer.from_pretrained('sentence-transformers/all-roberta-large-v1')
+# MODEL = AutoModel.from_pretrained('sentence-transformers/all-roberta-large-v1')
 
 
 # returns a high-dimensional (1024) vector representation of the passed in sentence.

@@ -12,6 +12,7 @@ import random
 import string
 from markupsafe import Markup
 from openai_call import ask_gpt
+import datetime
 
 app = Flask(__name__)
 
@@ -30,21 +31,29 @@ def login():
     if request.method == 'POST':
         session['username'] = request.form['username']
         session['password'] = '42'
-        session['adventure name'] = request.form['adventure_name']
+        # session.modified = True
+        pseudo_session = PseudoSession()
+        '''get_and_set_running_data(**{
+            'adventure name': request.form['adventure_name'],
+            'object_type': None,
+        })'''
+        pseudo_session['adventure name'] = request.form['adventure_name']
         if request.form['adventure_name'] == '':
-            session['adventure name'] = 'first adventure'
-        session['object_type'] = None
+            # get_and_set_running_data(**{'adventure name': 'first adventure'})
+            pseudo_session['adventure name'] = 'first adventure'
+        pseudo_session['object_type'] = None
+        # get_and_set_running_data(**{''})
         for i in ['name_to_id', 'unsetname_to_list_of_setnames']:
-            if i not in session:
-                session[i] = {}
-        if 'unset_names' not in session:
-            session['unset_names'] = []
+            if i not in pseudo_session:
+                pseudo_session[i] = {}
+        if 'unset_names' not in pseudo_session:
+            pseudo_session['unset_names'] = []
         return redirect(url_for('index'))
-    rand_str = ''.join(random.choice(string.ascii_letters) for x in range(12))
+    rand_str = ''.join(random.choice(string.ascii_letters) for _ in range(12))
 
     return f'''
         <form method="post">
-            <p>Please enter your username:<br><input type=text name=username value="{rand_str}">
+            <p>Please enter your username:<br><input type=text name=username value="ZZ{rand_str}">
             <p>You can also specify the adventure name if you want to:<br><input type=text name=adventure_name>
             <p><input type=submit value=Login>
         </form>
@@ -106,6 +115,7 @@ def write_object():
 
 @app.route('/save_unit', methods=['POST'])
 def save_unit():
+    pseudo_session = PseudoSession()
     # TODO: Comment through this function
     # The user just submitted the form to create a new object.
     # This function needs to create the object, append it to the adventure and return a redirect to index.
@@ -163,25 +173,32 @@ def save_unit():
 
     # add to adventure
     adventure = load_or_save_adventure()
-    if name in session['name_to_id'].keys():
+    if name in pseudo_session['name_to_id'].keys():  # .keys is not necessary, is it?
         # this means an already existing object was edited
-        unit_id = session['name_to_id'][name]
+        unit_id = pseudo_session['name_to_id'][name]
         adventure[unit_id] = unit
     else:
-        # TODO: save adventure and unit to training data
+        if not pseudo_session.username.startswith('ZZ'):
+            # Prompt enhancements should be saved here as well.
+            ts = datetime.datetime.now().timestamp()
+            with open(f'data/adventure_{ts}', 'w') as f:
+                json.dump([adventure.to_dict(), unit.to_dict()], f, indent=4)
+            # TODO: save adventure and unit to training data
         unit_id = adventure.add_unit(unit)
 
     # check names and ids.
     name = request.form['name']
-    if name in session['unset_names']:
-        session['unset_names'].remove(name)
-    session['name_to_id'].update({name: unit_id})
+    if name in pseudo_session['unset_names']:
+        pseudo_session['unset_names'].remove(name)
+        pseudo_session.save()
+    pseudo_session['name_to_id'].update({name: unit_id})
+    pseudo_session.save()
 
     # iterate over already existing units that reference the just created one.
-    if name in session['unsetname_to_list_of_setnames'].keys():
-        for i in session['unsetname_to_list_of_setnames'][name]:
+    if name in pseudo_session['unsetname_to_list_of_setnames'].keys():
+        for i in pseudo_session['unsetname_to_list_of_setnames'][name]:
             # i is a tuple: (name, the feature where the reference is)
-            i_unit_id = session['name_to_id'][i[0]]
+            i_unit_id = pseudo_session['name_to_id'][i[0]]
             i_unit_id = UnitId(i_unit_id[0], i_unit_id[1])
 
             # updating unit without changing any ids.
@@ -198,22 +215,28 @@ def save_unit():
             adventure[i_unit_id] = unit
 
     load_or_save_adventure(adventure=adventure)
+    pseudo_session.save()
 
-    session.modified = True
+    # session.modified = True
 
     return redirect(url_for('index'))
 
 
 def register_name(name, feature, selfname):
-    if name in session['name_to_id']:
-        value = session['name_to_id'][name]
+    pseudo_session = PseudoSession()
+    if name in pseudo_session['name_to_id']:
+        value = pseudo_session['name_to_id'][name]
         return UnitId(value[0], value[1])
-        # the unitId class gets transformed to a normal tuple in the session.
+        # the unitId class gets transformed to a normal tuple in the pseudo_session.
         # So it needs to be remade here.
-    if name not in session['unset_names']:
-        session['unset_names'].append(name)
-        session['unsetname_to_list_of_setnames'].update({name: []})
-    session['unsetname_to_list_of_setnames'][name].append((selfname, feature))
+    if name not in pseudo_session['unset_names']:
+        pseudo_session['unset_names'].append(name)
+        pseudo_session.save()  # after changes to mutable objects .save() needs to be called.
+        pseudo_session['unsetname_to_list_of_setnames'].update({name: []})
+        pseudo_session.save()
+    pseudo_session['unsetname_to_list_of_setnames'][name].append((selfname, feature))
+    pseudo_session.save()
+
 
 
 @app.route('/')
@@ -221,8 +244,9 @@ def index():
     # this function displays the adventure currently being written in good human-readable format.
     if 'username' not in session:
         return redirect(url_for('login'))
+    pseudo_session = PseudoSession()
     adventure = load_or_save_adventure()  # load adventure
-    id_to_name = {val: key for key, val in session['name_to_id'].items()}
+    id_to_name = {tuple(val): key for key, val in pseudo_session['name_to_id'].items()}
     print(adventure.to_listing(id_to_name) + 'pingpong')
     in_html = adventure.to_html(id_to_name)
     # in_html = json.dumps(adventure.to_dict(), indent=4)
@@ -250,16 +274,18 @@ def get_unit_nr(unit_type):
 
 
 def call_ai(adventure, unit_type):
+    pseudo_session = PseudoSession()
     object_n = 0
     if object_n > 0:
         object_n = object_n - 1
         for unit_class in all_unit_types:
             if unit_class.__name__ == unit_type:
                 return unit_class()
-    return ask_gpt(adventure, unit_type, session['name_to_id'])
+    return ask_gpt(adventure, unit_type, pseudo_session['name_to_id'])
 
 
 def get_unit(unit_type, unit_nr):
+    pseudo_session = PseudoSession()
     adventure = load_or_save_adventure()
     if unit_nr is None:
         # get object from AI
@@ -269,17 +295,18 @@ def get_unit(unit_type, unit_nr):
         # load object from adventure
         unit_id = UnitId(unit_type, unit_nr)
         unit = adventure[unit_id]
-        id_to_name = {val: key for key, val in session['name_to_id'].items()}
+        id_to_name = {tuple(val): key for key, val in pseudo_session['name_to_id'].items()}
         assert unit_id in id_to_name.keys()
         default_name = id_to_name[unit_id]
     return unit, default_name
 
 
 def write_name_select_box(default_name):
+    pseudo_session = PseudoSession()
     name = ''
     if default_name is not None:
         name += f'<option selected="selected">{default_name}</option>'  # ?maybe disable selectbox here.
-    for i in session['unset_names']:
+    for i in pseudo_session['unset_names']:
         name += f'<option>{i}</option>'
     # if name_default is None:
     name = f'Name to reference this object: <select name="name" class="js-single-choice" onchange="checkform();">{name}</select><br>'
@@ -287,6 +314,7 @@ def write_name_select_box(default_name):
 
 
 def write_pre_filled_form(unit):
+    pseudo_session = PseudoSession()
     # TODO: clean this function and comment through it.
     # object_text = f'Unit Type: {unit_type}.<br>'
     unit_text = ''
@@ -312,10 +340,10 @@ def write_pre_filled_form(unit):
             else:
                 unit_text += f'{feature}: <input type=checkbox name="{feature}" value="True"><br>'
         elif feature_type == UnitId:
-            id_to_name = {val: key for key, val in session['name_to_id'].items()}
+            id_to_name = {tuple(val): key for key, val in pseudo_session['name_to_id'].items()}
             if value in id_to_name.keys():
                 value = id_to_name[value]
-            all_names = session['unset_names'] + list(session['name_to_id'].keys())
+            all_names = pseudo_session['unset_names'] + list(pseudo_session['name_to_id'].keys())
             option_text = '<option></option>'
             for i in all_names:
                 if i == value:
@@ -325,7 +353,7 @@ def write_pre_filled_form(unit):
             unit_text += f'{feature}: <select name="{feature}" class="js-single-choice-with-clear">' \
                          f'{option_text}</select><br>'
         elif feature_type == (list, UnitId):
-            id_to_name = {val: key for key, val in session['name_to_id'].items()}
+            id_to_name = {tuple(val): key for key, val in pseudo_session['name_to_id'].items()}
             new_value = []
             if value is None:
                 value = []
@@ -335,7 +363,7 @@ def write_pre_filled_form(unit):
                 else:
                     raise ValueError
                     new_value.append(i)
-            all_names = session['unset_names'] + list(session['name_to_id'].keys())
+            all_names = pseudo_session['unset_names'] + list(pseudo_session['name_to_id'].keys())
             option_text = '<option></option>'
             for i in all_names:
                 if i in new_value:
@@ -350,10 +378,10 @@ def write_pre_filled_form(unit):
     return unit_text
 
 
-
 def load_or_save_adventure(adventure=None):
     username = session['username']
-    adventure_name = session['adventure name']
+    pseudo_session = PseudoSession()
+    adventure_name = pseudo_session['adventure name']
     filename = f'user_written_adventures/{username}/{adventure_name}.json'
     if not os.path.exists(f'user_written_adventures/{username}'):
         os.mkdir(f'user_written_adventures/{username}')
@@ -366,6 +394,52 @@ def load_or_save_adventure(adventure=None):
         return adventure
     adventure = Adventure(filename=filename)
     return adventure
+
+
+
+class PseudoSession():
+    def __init__(self, filename='running_data.json'):
+        self.username = session['username']
+        self.filename = filename
+        self.data = None  # gets set in self.load
+        self.load()
+
+    def load(self):
+        with open(self.filename, 'r') as f:
+            data = json.load(f)
+        if self.data != data:
+            self.data = data
+
+    def save(self):
+        with open(self.filename, 'w') as f:
+            json.dump(self.data, f, indent=4)
+
+    def __contains__(self, item):  # won't work. p_data gives back a dictionary!
+        self.load()
+        return item in self.data
+
+    def __getitem__(self, item):
+        self.load()
+        x = self.data[self.username][item]
+        return x
+
+    def __setitem__(self, item, value):
+        self.load()
+        if self.username not in self.data.keys():
+            self.data.update({self.username: {}})
+        self.data[self.username].update({item: value})
+        self.save()
+
+
+def get_and_set_running_data(*args, **kwargs):
+    with open('running_data.json') as f:
+        data = json.load(f)[session['username']]
+    to_return = [data[key] for key in args]
+    for key, val in kwargs.items():
+        data.update({key: val})
+    with open('running_data.json', 'w') as f:
+        json.dump(to_return, f)
+    return to_return
 
 
 if __name__ == "__main__":

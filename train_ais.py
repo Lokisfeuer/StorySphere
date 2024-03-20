@@ -85,7 +85,7 @@ if __name__ == '__main__':
     #   - include some list of ids features
     #  test
 
-    anna()
+    # anna()
     bernd()
     # charlene()
 
